@@ -165,7 +165,7 @@ int fmp_cipher_run(struct exynos_fmp *fmp,
 	} else {
 		lock_buffer(bh);
 		bh->b_end_io = end_buffer_read_sync;
-		submit_bh(REQ_OP_READ, READ_SYNC | REQ_PRIO, bh);
+		submit_bh(REQ_OP_READ, 0 | REQ_PRIO, bh);
 		wait_on_buffer(bh);
 		if (unlikely(!buffer_uptodate(bh))) {
 			ret = -EIO;
