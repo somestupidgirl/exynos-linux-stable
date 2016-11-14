@@ -105,6 +105,9 @@ static void reshape_request_write(struct mddev *mddev, struct r10bio *r10_bio);
 static void end_reshape_write(struct bio *bio);
 static void end_reshape(struct r10conf *conf);
 
+#define raid10_log(md, fmt, args...)				\
+	do { if ((md)->queue) blk_add_trace_msg((md)->queue, "raid10 " fmt, ##args); } while (0)
+
 static void * r10bio_pool_alloc(gfp_t gfp_flags, void *data)
 {
 	struct r10conf *conf = data;
@@ -937,6 +940,7 @@ static void wait_barrier(struct r10conf *conf)
 		 * that queue to get the nr_pending
 		 * count down.
 		 */
+		raid10_log(conf->mddev, "wait barrier");
 		wait_event_lock_irq(conf->wait_barrier,
 				    !conf->barrier ||
 				    (atomic_read(&conf->nr_pending) &&
@@ -1084,6 +1088,7 @@ static void __make_request(struct mddev *mddev, struct bio *bio)
 		/* IO spans the reshape position.  Need to wait for
 		 * reshape to pass
 		 */
+		raid10_log(conf->mddev, "wait reshape");
 		allow_barrier(conf);
 		wait_event(conf->wait_barrier,
 			   conf->reshape_progress <= bio->bi_iter.bi_sector ||
@@ -1103,6 +1108,7 @@ static void __make_request(struct mddev *mddev, struct bio *bio)
 		set_mask_bits(&mddev->flags, 0,
 			      BIT(MD_CHANGE_DEVS) | BIT(MD_CHANGE_PENDING));
 		md_wakeup_thread(mddev->thread);
+		raid10_log(conf->mddev, "wait reshape metadata");
 		wait_event(mddev->sb_wait,
 			   !test_bit(MD_CHANGE_PENDING, &mddev->flags));
 
@@ -1196,6 +1202,7 @@ read_again:
 	 */
 	if (conf->pending_count >= max_queued_requests) {
 		md_wakeup_thread(mddev->thread);
+		raid10_log(mddev, "wait queued");
 		wait_event(conf->wait_barrier,
 			   conf->pending_count < max_queued_requests);
 	}
@@ -1323,6 +1330,7 @@ retry_write:
 			}
 		}
 		allow_barrier(conf);
+		raid10_log(conf->mddev, "wait rdev %d blocked", blocked_rdev->raid_disk);
 		md_wait_for_blocked_rdev(blocked_rdev, mddev);
 		wait_barrier(conf);
 		goto retry_write;
