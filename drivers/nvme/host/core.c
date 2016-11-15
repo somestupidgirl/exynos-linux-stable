@@ -294,7 +294,7 @@ static inline int nvme_setup_discard(struct nvme_ns *ns, struct request *req,
 	req->special_vec.bv_len = sizeof(*range);
 	req->rq_flags |= RQF_SPECIAL_PAYLOAD;
 
-	return 0;
+	return BLK_MQ_RQ_QUEUE_OK;
 }
 
 static inline void nvme_setup_rw(struct nvme_ns *ns, struct request *req,
@@ -341,7 +341,7 @@ static inline void nvme_setup_rw(struct nvme_ns *ns, struct request *req,
 int nvme_setup_cmd(struct nvme_ns *ns, struct request *req,
 		struct nvme_command *cmd)
 {
-	int ret = 0;
+	int ret = BLK_MQ_RQ_QUEUE_OK;
 
 	if (!(req->rq_flags & RQF_DONTPREP)) {
 		nvme_req(req)->retries = 0;
