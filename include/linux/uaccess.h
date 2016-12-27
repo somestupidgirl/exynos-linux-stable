@@ -2,6 +2,7 @@
 #define __LINUX_UACCESS_H__
 
 #include <linux/sched.h>
+#include <linux/thread_info.h>
 
 #define uaccess_kernel() segment_eq(get_fs(), KERNEL_DS)
 
