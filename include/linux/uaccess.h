@@ -5,6 +5,9 @@
 
 #define uaccess_kernel() segment_eq(get_fs(), KERNEL_DS)
 
+#define VERIFY_READ 0
+#define VERIFY_WRITE 1
+
 #include <asm/uaccess.h>
 
 static __always_inline void pagefault_disabled_inc(void)
