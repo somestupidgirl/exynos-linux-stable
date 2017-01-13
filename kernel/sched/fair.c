@@ -5877,12 +5877,6 @@ unsigned long capacity_min_of(int cpu)
 	       >> SCHED_CAPACITY_SHIFT;
 }
 
-
-static inline bool energy_aware(void)
-{
-	return sched_feat(ENERGY_AWARE);
-}
-
 /**
  * Amount of capacity of a CPU that is (estimated to be) used by CFS tasks
  * @cpu: the CPU to get the utilization of
