@@ -161,6 +161,8 @@ struct r5l_log {
 
 	/* to submit async io_units, to fulfill ordering of flush */
 	struct work_struct deferred_io_work;
+	/* to disable write back during in degraded mode */
+	struct work_struct disable_writeback_work;
 };
 
 /*
@@ -615,6 +617,21 @@ static void r5l_submit_io_async(struct work_struct *work)
 	spin_unlock_irqrestore(&log->io_list_lock, flags);
 	if (io)
 		r5l_do_submit_io(log, io);
+}
+
+static void r5c_disable_writeback_async(struct work_struct *work)
+{
+	struct r5l_log *log = container_of(work, struct r5l_log,
+					   disable_writeback_work);
+	struct mddev *mddev = log->rdev->mddev;
+
+	if (log->r5c_journal_mode == R5C_JOURNAL_MODE_WRITE_THROUGH)
+		return;
+	pr_info("md/raid:%s: Disabling writeback cache for degraded array.\n",
+		mdname(mddev));
+	mddev_suspend(mddev);
+	log->r5c_journal_mode = R5C_JOURNAL_MODE_WRITE_THROUGH;
+	mddev_resume(mddev);
 }
 
 static void r5l_submit_current_io(struct r5l_log *log)
@@ -1808,6 +1825,10 @@ static ssize_t r5c_journal_mode_store(struct mddev *mddev,
 	    val > R5C_JOURNAL_MODE_WRITE_BACK)
 		return -EINVAL;
 
+	if (raid5_calc_degraded(conf) > 0 &&
+	    val == R5C_JOURNAL_MODE_WRITE_BACK)
+		return -EINVAL;
+
 	mddev_suspend(mddev);
 	conf->log->r5c_journal_mode = val;
 	mddev_resume(mddev);
@@ -1860,6 +1881,16 @@ int r5c_try_caching_write(struct r5conf *conf,
 			return -EAGAIN;
 		/* case 2 */
 		set_bit(STRIPE_R5C_CACHING, &sh->state);
+	}
+
+	/*
+	 * When run in degraded mode, array is set to write-through mode.
+	 * This check helps drain pending write safely in the transition to
+	 * write-through mode.
+	 */
+	if (s->failed) {
+		r5c_make_stripe_write_out(sh);
+		return -EAGAIN;
 	}
 
 	for (i = disks; i--; ) {
@@ -2114,6 +2145,19 @@ ioerr:
 	return ret;
 }
 
+void r5c_update_on_rdev_error(struct mddev *mddev)
+{
+	struct r5conf *conf = mddev->private;
+	struct r5l_log *log = conf->log;
+
+	if (!log)
+		return;
+
+	if (raid5_calc_degraded(conf) > 0 &&
+	    conf->log->r5c_journal_mode == R5C_JOURNAL_MODE_WRITE_BACK)
+		schedule_work(&log->disable_writeback_work);
+}
+
 int r5l_init_log(struct r5conf *conf, struct md_rdev *rdev)
 {
 	struct request_queue *q = bdev_get_queue(rdev->bdev);
@@ -2170,6 +2214,7 @@ int r5l_init_log(struct r5conf *conf, struct md_rdev *rdev)
 	spin_lock_init(&log->no_space_stripes_lock);
 
 	INIT_WORK(&log->deferred_io_work, r5l_submit_io_async);
+	INIT_WORK(&log->disable_writeback_work, r5c_disable_writeback_async);
 
 	log->r5c_journal_mode = R5C_JOURNAL_MODE_WRITE_THROUGH;
 	INIT_LIST_HEAD(&log->stripe_in_journal_list);
@@ -2200,6 +2245,7 @@ io_kc:
 
 void r5l_exit_log(struct r5l_log *log)
 {
+	flush_work(&log->disable_writeback_work);
 	md_unregister_thread(&log->reclaim_thread);
 	mempool_destroy(log->meta_pool);
 	bioset_free(log->bs);
