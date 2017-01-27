@@ -3347,7 +3347,6 @@ brcmf_notify_sched_scan_results(struct brcmf_if *ifp,
 		goto out_err;
 	}
 
-	data += sizeof(struct brcmf_pno_scanresults_le);
 	netinfo_start = brcmf_get_netinfo_array(pfn_result);
 
 	bucket_map = 0;
@@ -3503,10 +3502,10 @@ brcmf_wowl_nd_results(struct brcmf_if *ifp, const struct brcmf_event_msg *e,
 		return -EINVAL;
 	}
 
-	data += sizeof(struct brcmf_pno_scanresults_le);
-	netinfo = (struct brcmf_pno_net_info_le *)data;
+	netinfo = brcmf_get_netinfo_array(pfn_result);
 	if (netinfo->SSID_len > IEEE80211_MAX_SSID_LEN)
 		netinfo->SSID_len = IEEE80211_MAX_SSID_LEN;
+
 	memcpy(cfg->wowl.nd->ssid.ssid, netinfo->SSID, netinfo->SSID_len);
 	cfg->wowl.nd->ssid.ssid_len = netinfo->SSID_len;
 	cfg->wowl.nd->n_channels = 1;
