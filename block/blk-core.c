@@ -33,6 +33,7 @@
 #include <linux/ratelimit.h>
 #include <linux/pm_runtime.h>
 #include <linux/blk-cgroup.h>
+#include <linux/debugfs.h>
 #include <linux/psi.h>
 
 #define CREATE_TRACE_POINTS
@@ -44,6 +45,10 @@
 #include "blk-wbt.h"
 
 #include <linux/math64.h>
+
+#ifdef CONFIG_DEBUG_FS
+struct dentry *blk_debugfs_root;
+#endif
 
 EXPORT_TRACEPOINT_SYMBOL_GPL(block_bio_remap);
 EXPORT_TRACEPOINT_SYMBOL_GPL(block_rq_remap);
@@ -3570,6 +3575,10 @@ int __init blk_dev_init(void)
 
 	blk_requestq_cachep = kmem_cache_create("request_queue",
 			sizeof(struct request_queue), 0, SLAB_PANIC, NULL);
+
+#ifdef CONFIG_DEBUG_FS
+	blk_debugfs_root = debugfs_create_dir("block", NULL);
+#endif
 
 #if !defined(CONFIG_SAMSUNG_PRODUCT_SHIP)
 	sio_debugfs_init();
