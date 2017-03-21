@@ -24,6 +24,8 @@
 
 #define segment_eq(a, b)	((a).seg == (b).seg)
 
+#define __kernel_ok (uaccess_kernel())
+
 static inline int __access_ok(unsigned long addr, unsigned long size)
 {
 	/*
