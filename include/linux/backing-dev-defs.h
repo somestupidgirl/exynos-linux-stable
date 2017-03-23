@@ -167,8 +167,11 @@ struct backing_dev_info {
 #ifdef CONFIG_CGROUP_WRITEBACK
 	struct radix_tree_root cgwb_tree; /* radix tree of active cgroup wbs */
 	struct rb_root cgwb_congested_tree; /* their congested states */
+<<<<<<< HEAD
 	atomic_t usage_cnt; /* counts both cgwbs and cgwb_contested's */
 	struct rw_semaphore wb_switch_rwsem; /* no cgwb switch while syncing */
+=======
+>>>>>>> 4514451e79ae5 (bdi: Do not wait for cgwbs release in bdi_unregister())
 #else
 	struct bdi_writeback_congested *wb_congested;
 #endif
