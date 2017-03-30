@@ -173,6 +173,42 @@
  */
 
 /**
+ * DOC: FILS shared key authentication offload
+ *
+ * FILS shared key authentication offload can be advertized by drivers by
+ * setting @NL80211_EXT_FEATURE_FILS_SK_OFFLOAD flag. The drivers that support
+ * FILS shared key authentication offload should be able to construct the
+ * authentication and association frames for FILS shared key authentication and
+ * eventually do a key derivation as per IEEE 802.11ai. The below additional
+ * parameters should be given to driver in %NL80211_CMD_CONNECT.
+ *	%NL80211_ATTR_FILS_ERP_USERNAME - used to construct keyname_nai
+ *	%NL80211_ATTR_FILS_ERP_REALM - used to construct keyname_nai
+ *	%NL80211_ATTR_FILS_ERP_NEXT_SEQ_NUM - used to construct erp message
+ *	%NL80211_ATTR_FILS_ERP_RRK - used to generate the rIK and rMSK
+ * rIK should be used to generate an authentication tag on the ERP message and
+ * rMSK should be used to derive a PMKSA.
+ * rIK, rMSK should be generated and keyname_nai, sequence number should be used
+ * as specified in IETF RFC 6696.
+ *
+ * When FILS shared key authentication is completed, driver needs to provide the
+ * below additional parameters to userspace.
+ *	%NL80211_ATTR_FILS_KEK - used for key renewal
+ *	%NL80211_ATTR_FILS_ERP_NEXT_SEQ_NUM - used in further EAP-RP exchanges
+ *	%NL80211_ATTR_PMKID - used to identify the PMKSA used/generated
+ *	%Nl80211_ATTR_PMK - used to update PMKSA cache in userspace
+ * The PMKSA can be maintained in userspace persistently so that it can be used
+ * later after reboots or wifi turn off/on also.
+ *
+ * %NL80211_ATTR_FILS_CACHE_ID is the cache identifier advertized by a FILS
+ * capable AP supporting PMK caching. It specifies the scope within which the
+ * PMKSAs are cached in an ESS. %NL80211_CMD_SET_PMKSA and
+ * %NL80211_CMD_DEL_PMKSA are enhanced to allow support for PMKSA caching based
+ * on FILS cache identifier. Additionally %NL80211_ATTR_PMK is used with
+ * %NL80211_SET_PMKSA to specify the PMK corresponding to a PMKSA for driver to
+ * use in a FILS shared key connection with PMKSA caching.
+ */
+
+/**
  * enum nl80211_commands - supported nl80211 commands
  *
  * @NL80211_CMD_UNSPEC: unspecified command to catch errors
@@ -372,10 +408,18 @@
  * @NL80211_CMD_NEW_SURVEY_RESULTS: survey data notification (as a reply to
  *	NL80211_CMD_GET_SURVEY and on the "scan" multicast group)
  *
- * @NL80211_CMD_SET_PMKSA: Add a PMKSA cache entry, using %NL80211_ATTR_MAC
- *	(for the BSSID) and %NL80211_ATTR_PMKID.
+ * @NL80211_CMD_SET_PMKSA: Add a PMKSA cache entry using %NL80211_ATTR_MAC
+ *	(for the BSSID), %NL80211_ATTR_PMKID, and optionally %NL80211_ATTR_PMK
+ *	(PMK is used for PTKSA derivation in case of FILS shared key offload) or
+ *	using %NL80211_ATTR_SSID, %NL80211_ATTR_FILS_CACHE_ID,
+ *	%NL80211_ATTR_PMKID, and %NL80211_ATTR_PMK in case of FILS
+ *	authentication where %NL80211_ATTR_FILS_CACHE_ID is the identifier
+ *	advertized by a FILS capable AP identifying the scope of PMKSA in an
+ *	ESS.
  * @NL80211_CMD_DEL_PMKSA: Delete a PMKSA cache entry, using %NL80211_ATTR_MAC
- *	(for the BSSID) and %NL80211_ATTR_PMKID.
+ *	(for the BSSID) and %NL80211_ATTR_PMKID or using %NL80211_ATTR_SSID,
+ *	%NL80211_ATTR_FILS_CACHE_ID, and %NL80211_ATTR_PMKID in case of FILS
+ *	authentication.
  * @NL80211_CMD_FLUSH_PMKSA: Flush all PMKSA cache entries.
  *
  * @NL80211_CMD_REG_CHANGE: indicates to userspace the regulatory domain
@@ -1960,6 +2004,31 @@ enum nl80211_commands {
  * @NL80211_ATTR_SCHED_SCAN_MAX_REQS: indicates maximum number of scheduled
  *	scan request that may be active for the device (u32).
  *
+ * @NL80211_ATTR_FILS_ERP_USERNAME: EAP Re-authentication Protocol (ERP)
+ *	username part of NAI used to refer keys rRK and rIK. This is used with
+ *	%NL80211_CMD_CONNECT.
+ *
+ * @NL80211_ATTR_FILS_ERP_REALM: EAP Re-authentication Protocol (ERP) realm part
+ *	of NAI specifying the domain name of the ER server. This is used with
+ *	%NL80211_CMD_CONNECT.
+ *
+ * @NL80211_ATTR_FILS_ERP_NEXT_SEQ_NUM: Unsigned 16-bit ERP next sequence number
+ *	to use in ERP messages. This is used in generating the FILS wrapped data
+ *	for FILS authentication and is used with %NL80211_CMD_CONNECT.
+ *
+ * @NL80211_ATTR_FILS_ERP_RRK: ERP re-authentication Root Key (rRK) for the
+ *	NAI specified by %NL80211_ATTR_FILS_ERP_USERNAME and
+ *	%NL80211_ATTR_FILS_ERP_REALM. This is used for generating rIK and rMSK
+ *	from successful FILS authentication and is used with
+ *	%NL80211_CMD_CONNECT.
+ *
+ * @NL80211_ATTR_FILS_CACHE_ID: A 2-octet identifier advertized by a FILS AP
+ *	identifying the scope of PMKSAs. This is used with
+ *	@NL80211_CMD_SET_PMKSA and @NL80211_CMD_DEL_PMKSA.
+ *
+ * @NL80211_ATTR_PMK: PMK for the PMKSA identified by %NL80211_ATTR_PMKID.
+ *	This is used with @NL80211_CMD_SET_PMKSA.
+ *
  * @NUM_NL80211_ATTR: total number of nl80211_attrs available
  * @NL80211_ATTR_MAX: highest attribute number currently defined
  * @__NL80211_ATTR_AFTER_LAST: internal use
@@ -2366,6 +2435,14 @@ enum nl80211_attrs {
 
 	NL80211_ATTR_SCHED_SCAN_MULTI,
 	NL80211_ATTR_SCHED_SCAN_MAX_REQS,
+
+	NL80211_ATTR_FILS_ERP_USERNAME,
+	NL80211_ATTR_FILS_ERP_REALM,
+	NL80211_ATTR_FILS_ERP_NEXT_SEQ_NUM,
+	NL80211_ATTR_FILS_ERP_RRK,
+	NL80211_ATTR_FILS_CACHE_ID,
+
+	NL80211_ATTR_PMK,
 
 	/* add attributes here, update the policy in nl80211.c */
 
@@ -4681,12 +4758,13 @@ enum nl80211_feature_flags {
  *	in @NL80211_CMD_FRAME while not associated.
  * @NL80211_EXT_FEATURE_MGMT_TX_RANDOM_TA_CONNECTED: This driver supports
  *	randomized TA in @NL80211_CMD_FRAME while associated.
+ * @NL80211_EXT_FEATURE_FILS_SK_OFFLOAD: Driver SME supports FILS shared key
+ *	authentication with %NL80211_CMD_CONNECT.
+ *
  * @NUM_NL80211_EXT_FEATURES: number of extended features.
  * @MAX_NL80211_EXT_FEATURES: highest extended feature index.
  */
 enum nl80211_ext_feature_index {
-	NL80211_EXT_FEATURE_MGMT_TX_RANDOM_TA,
-	NL80211_EXT_FEATURE_MGMT_TX_RANDOM_TA_CONNECTED,
 	NL80211_EXT_FEATURE_VHT_IBSS,
 	NL80211_EXT_FEATURE_RRM,
 	NL80211_EXT_FEATURE_MU_MIMO_AIR_SNIFFER,
@@ -4697,6 +4775,9 @@ enum nl80211_ext_feature_index {
 	NL80211_EXT_FEATURE_BEACON_RATE_HT,
 	NL80211_EXT_FEATURE_BEACON_RATE_VHT,
 	NL80211_EXT_FEATURE_FILS_STA,
+	NL80211_EXT_FEATURE_MGMT_TX_RANDOM_TA,
+	NL80211_EXT_FEATURE_MGMT_TX_RANDOM_TA_CONNECTED,
+	NL80211_EXT_FEATURE_FILS_SK_OFFLOAD,
 
 	/* add new features before the definition below */
 	NUM_NL80211_EXT_FEATURES,
