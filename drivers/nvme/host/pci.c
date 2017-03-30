@@ -1144,7 +1144,7 @@ static int nvme_create_queue(struct nvme_queue *nvmeq, int qid)
 	return result;
 }
 
-static struct blk_mq_ops nvme_mq_admin_ops = {
+static const struct blk_mq_ops nvme_mq_admin_ops = {
 	.queue_rq	= nvme_queue_rq,
 	.complete	= nvme_complete_rq,
 	.init_hctx	= nvme_admin_init_hctx,
@@ -1153,7 +1153,7 @@ static struct blk_mq_ops nvme_mq_admin_ops = {
 	.timeout	= nvme_timeout,
 };
 
-static struct blk_mq_ops nvme_mq_ops = {
+static const struct blk_mq_ops nvme_mq_ops = {
 	.queue_rq	= nvme_queue_rq,
 	.complete	= nvme_complete_rq,
 	.init_hctx	= nvme_init_hctx,
