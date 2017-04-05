@@ -356,6 +356,8 @@ int nvme_setup_cmd(struct nvme_ns *ns, struct request *req,
 	case REQ_OP_FLUSH:
 		nvme_setup_flush(ns, cmd);
 		break;
+	case REQ_OP_WRITE_ZEROES:
+		/* currently only aliased to deallocate for a few ctrls: */
 	case REQ_OP_DISCARD:
 		ret = nvme_setup_discard(ns, req, cmd);
 		break;
@@ -918,15 +920,13 @@ static void nvme_config_discard(struct nvme_ns *ns)
 	struct nvme_ctrl *ctrl = ns->ctrl;
 	u32 logical_block_size = queue_logical_block_size(ns->queue);
 
-	if (ctrl->quirks & NVME_QUIRK_DISCARD_ZEROES)
-		ns->queue->limits.discard_zeroes_data = 1;
-	else
-		ns->queue->limits.discard_zeroes_data = 0;
-
 	ns->queue->limits.discard_alignment = logical_block_size;
 	ns->queue->limits.discard_granularity = logical_block_size;
 	blk_queue_max_discard_sectors(ns->queue, UINT_MAX);
 	queue_flag_set_unlocked(QUEUE_FLAG_DISCARD, ns->queue);
+
+	if (ctrl->quirks & NVME_QUIRK_DEALLOCATE_ZEROES)
+		blk_queue_max_write_zeroes_sectors(ns->queue, UINT_MAX);
 }
 
 static int nvme_revalidate_ns(struct nvme_ns *ns, struct nvme_id_ns **id)
