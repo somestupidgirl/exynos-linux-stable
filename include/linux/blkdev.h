@@ -227,6 +227,8 @@ struct request {
 
 	unsigned short ioprio;
 
+	unsigned int timeout;
+
 	int internal_tag;
 
 	void *special;		/* opaque pointer available for LLD use */
@@ -237,7 +239,6 @@ struct request {
 
 	unsigned long deadline;
 	struct list_head timeout_list;
-	unsigned int timeout;
 
 	/*
 	 * completion callback.
