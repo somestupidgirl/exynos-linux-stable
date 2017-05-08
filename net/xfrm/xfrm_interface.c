@@ -568,7 +568,7 @@ static void xfrmi_dev_setup(struct net_device *dev)
 	dev->mtu		= ETH_DATA_LEN;
 	dev->addr_len		= ETH_ALEN;
 	dev->flags 		= IFF_NOARP;
-	dev->destructor	= xfrmi_dev_free;
+	dev->priv_destructor	= xfrmi_dev_free;
 	netif_keep_dst(dev);
 }
 

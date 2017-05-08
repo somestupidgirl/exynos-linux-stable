@@ -5335,7 +5335,6 @@ void brcmf_cfg80211_free_netdev(struct net_device *ndev)
 
 	if (vif)
 		brcmf_free_vif(vif);
-	free_netdev(ndev);
 }
 
 static bool brcmf_is_linkup(struct brcmf_cfg80211_vif *vif,
