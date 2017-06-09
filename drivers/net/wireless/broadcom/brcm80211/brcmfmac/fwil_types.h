@@ -45,6 +45,9 @@
 #define BRCMF_SCAN_PARAMS_COUNT_MASK	0x0000ffff
 #define BRCMF_SCAN_PARAMS_NSSID_SHIFT	16
 
+#define BRCMF_WSEC_MAX_PSK_LEN		32
+#define	BRCMF_WSEC_PASSPHRASE		BIT(0)
+
 /* scan type definitions */
 #define BRCMF_SCANTYPE_DEFAULT		0xFF
 #define BRCMF_SCANTYPE_ACTIVE		0
@@ -472,6 +475,19 @@ struct brcmf_wsec_key_le {
 	} rxiv;
 	__le32 pad_4[2];
 	u8 ea[ETH_ALEN];	/* per station */
+};
+
+/**
+ * struct brcmf_wsec_pmk_le - firmware pmk material.
+ *
+ * @key_len: number of octets in key material.
+ * @flags: key handling qualifiers.
+ * @key: PMK key material.
+ */
+struct brcmf_wsec_pmk_le {
+	__le16  key_len;
+	__le16  flags;
+	u8 key[2 * BRCMF_WSEC_MAX_PSK_LEN + 1];
 };
 
 /* Used to get specific STA parameters */
