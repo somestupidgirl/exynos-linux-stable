@@ -2166,7 +2166,7 @@ static DEFINE_PER_CPU(struct batched_entropy, batched_entropy_u64);
 u64 get_random_u64(void)
 {
 	u64 ret;
-	bool use_lock = READ_ONCE(crng_init) < 2;
+	bool use_lock;
 	unsigned long flags = 0;
 	struct batched_entropy *batch;
 	static void *previous;
@@ -2182,6 +2182,7 @@ u64 get_random_u64(void)
 
 	warn_unseeded_randomness(&previous);
 
+	use_lock = READ_ONCE(crng_init) < 2;
 	batch = &get_cpu_var(batched_entropy_u64);
 	if (use_lock)
 		read_lock_irqsave(&batched_entropy_reset_lock, flags);
@@ -2201,7 +2202,7 @@ static DEFINE_PER_CPU(struct batched_entropy, batched_entropy_u32);
 u32 get_random_u32(void)
 {
 	u32 ret;
-	bool use_lock = READ_ONCE(crng_init) < 2;
+	bool use_lock;
 	unsigned long flags = 0;
 	struct batched_entropy *batch;
 	static void *previous;
@@ -2211,6 +2212,7 @@ u32 get_random_u32(void)
 
 	warn_unseeded_randomness(&previous);
 
+	use_lock = READ_ONCE(crng_init) < 2;
 	batch = &get_cpu_var(batched_entropy_u32);
 	if (use_lock)
 		read_lock_irqsave(&batched_entropy_reset_lock, flags);
