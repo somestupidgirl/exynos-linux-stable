@@ -1397,6 +1397,10 @@ static void intel_pstate_update_util(struct update_util_data *data, u64 time,
 	struct cpudata *cpu = container_of(data, struct cpudata, update_util);
 	u64 delta_ns;
 
+	/* Don't allow remote callbacks */
+	if (smp_processor_id() != cpu->cpu)
+		return;
+
 	if (pid_params.boost_iowait) {
 		if (flags & SCHED_CPUFREQ_IOWAIT) {
 			cpu->iowait_boost = int_tofp(1);
