@@ -795,6 +795,7 @@ void __noreturn do_exit(long code)
 	}
 
 	exit_signals(tsk);  /* sets PF_EXITING */
+	sched_exit(tsk);
 	sync_band(tsk, LEAVE_BAND);
 
 	schedtune_exit_task(tsk);

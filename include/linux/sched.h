@@ -153,6 +153,20 @@ extern void get_iowait_load(unsigned long *nr_waiters, unsigned long *load);
 extern u64 nr_running_integral(unsigned int cpu);
 #endif
 
+#ifdef CONFIG_SMP
+extern unsigned int sched_get_cpu_util(int cpu);
+extern u64 sched_get_cpu_last_busy_time(int cpu);
+#else
+static inline unsigned int sched_get_cpu_util(int cpu)
+{
+	return 0;
+}
+static inline u64 sched_get_cpu_last_busy_time(int cpu)
+{
+	return 0;
+}
+#endif
+
 #if defined(CONFIG_SMP) && defined(CONFIG_NO_HZ_COMMON)
 extern void cpu_load_update_nohz_start(void);
 extern void cpu_load_update_nohz_stop(void);
@@ -301,6 +315,12 @@ enum task_event {
 	IRQ_UPDATE	= 5,
 };
 
+/* Note: this need to be in sync with migrate_type_names array */
+enum migrate_types {
+	GROUP_TO_RQ,
+	RQ_TO_GROUP,
+};
+
 #include <linux/spinlock.h>
 
 /*
@@ -321,7 +341,7 @@ extern int lockdep_tasklist_lock_is_held(void);
 extern void sched_init(void);
 extern void sched_init_smp(void);
 extern asmlinkage void schedule_tail(struct task_struct *prev);
-extern void init_idle(struct task_struct *idle, int cpu);
+extern void init_idle(struct task_struct *idle, int cpu, bool cpu_up);
 extern void init_idle_bootup_task(struct task_struct *idle);
 
 extern cpumask_var_t cpu_isolated_map;
@@ -1194,6 +1214,7 @@ typedef const struct cpumask *(*sched_domain_mask_f)(int cpu);
 typedef int (*sched_domain_flags_f)(void);
 typedef
 const struct sched_group_energy * const(*sched_domain_energy_f)(int cpu);
+extern bool sched_is_energy_aware(void);
 
 #define SDTL_OVERLAP	0x01
 
@@ -1463,8 +1484,35 @@ struct sched_statistics {
 };
 #endif
 
+struct sched_load {
+	unsigned long prev_load;
+	unsigned long new_task_load;
+	unsigned long predicted_load;
+};
+
+struct cpu_cycle_counter_cb {
+	u64 (*get_cpu_cycle_counter)(int cpu);
+};
+
+#define MAX_NUM_CGROUP_COLOC_ID	20
+
+extern DEFINE_PER_CPU_READ_MOSTLY(int, sched_load_boost);
+
 #ifdef CONFIG_SCHED_WALT
+extern void sched_exit(struct task_struct *p);
+extern int register_cpu_cycle_counter_cb(struct cpu_cycle_counter_cb *cb);
+extern void sched_set_io_is_busy(int val);
+extern int sched_set_group_id(struct task_struct *p, unsigned int group_id);
+extern unsigned int sched_get_group_id(struct task_struct *p);
+extern int sched_set_init_task_load(struct task_struct *p, int init_load_pct);
+extern u32 sched_get_init_task_load(struct task_struct *p);
+extern void sched_update_cpu_freq_min_max(const cpumask_t *cpus, u32 fmin,
+					  u32 fmax);
+extern int sched_set_boost(int enable);
+extern void free_task_load_ptrs(struct task_struct *p);
+
 #define RAVG_HIST_SIZE_MAX  5
+#define NUM_BUSY_BUCKETS 10
 
 /* ravg represents frequency scaled cpu-demand of tasks */
 struct ravg {
@@ -1484,19 +1532,49 @@ struct ravg {
 	 * sysctl_sched_ravg_hist_size windows. 'demand' could drive frequency
 	 * demand for tasks.
 	 *
-	 * 'curr_window' represents task's contribution to cpu busy time
-	 * statistics (rq->curr_runnable_sum) in current window
+	 * 'curr_window_cpu' represents task's contribution to cpu busy time on
+	 * various CPUs in the current window
 	 *
-	 * 'prev_window' represents task's contribution to cpu busy time
-	 * statistics (rq->prev_runnable_sum) in previous window
+	 * 'prev_window_cpu' represents task's contribution to cpu busy time on
+	 * various CPUs in the previous window
+	 *
+	 * 'curr_window' represents the sum of all entries in curr_window_cpu
+	 *
+	 * 'prev_window' represents the sum of all entries in prev_window_cpu
+	 *
+	 * 'pred_demand' represents task's current predicted cpu busy time
+	 *
+	 * 'busy_buckets' groups historical busy time into different buckets
+	 * used for prediction
 	 */
 	u64 mark_start;
 	u32 sum, demand;
+	u32 coloc_demand;
 	u32 sum_history[RAVG_HIST_SIZE_MAX];
+	u32 *curr_window_cpu, *prev_window_cpu;
 	u32 curr_window, prev_window;
 	u16 active_windows;
+	u32 pred_demand;
+	u8 busy_buckets[NUM_BUSY_BUCKETS];
 };
-#endif
+#else
+static inline void sched_exit(struct task_struct *p) { }
+static inline int
+register_cpu_cycle_counter_cb(struct cpu_cycle_counter_cb *cb)
+{
+	return 0;
+}
+static inline void sched_set_io_is_busy(int val) {};
+
+static inline int sched_set_boost(int enable)
+{
+	return -EINVAL;
+}
+static inline void free_task_load_ptrs(struct task_struct *p) { }
+
+static inline void sched_update_cpu_freq_min_max(const cpumask_t *cpus,
+					u32 fmin, u32 fmax) { }
+#endif /* CONFIG_SCHED_WALT */
 
 struct sched_entity {
 	struct load_weight	load;		/* for load-balancing */
@@ -1690,6 +1768,7 @@ struct task_struct {
 	const struct sched_class *sched_class;
 	struct sched_entity se;
 	struct sched_rt_entity rt;
+	u64 last_sleep_ts;
 #ifdef CONFIG_SCHED_WALT
 	struct ravg ravg;
 	/*
@@ -1697,6 +1776,13 @@ struct task_struct {
 	 * of this task
 	 */
 	u32 init_load_pct;
+	u64 last_wake_ts;
+	u64 last_switch_out_ts;
+	u64 last_cpu_selected_ts;
+	struct related_thread_group *grp;
+	struct list_head grp_list;
+	u64 cpu_cycles;
+	bool misfit;
 #endif
 #ifdef CONFIG_SCHED_USE_FLUID_RT
 	int victim_flag;
@@ -3851,6 +3937,10 @@ static inline unsigned long rlimit_max(unsigned int limit)
 #define SCHED_CPUFREQ_RT	(1U << 0)
 #define SCHED_CPUFREQ_DL	(1U << 1)
 #define SCHED_CPUFREQ_IOWAIT	(1U << 2)
+#define SCHED_CPUFREQ_INTERCLUSTER_MIG (1U << 3)
+#define SCHED_CPUFREQ_WALT (1U << 4)
+#define SCHED_CPUFREQ_PL	(1U << 5)
+#define SCHED_CPUFREQ_EARLY_DET (1U << 6)
 
 #ifdef CONFIG_CPU_FREQ
 struct update_util_data {
