@@ -160,6 +160,8 @@ struct rte_console {
 
 #define CORE_BUS_REG(base, field) \
 		(base + offsetof(struct sdpcmd_regs, field))
+#define SD_REG(field) \
+		(offsetof(struct sdpcmd_regs, field))
 
 /* SDIO function 1 register CHIPCLKCSR */
 /* Force ALP request to backplane */
@@ -1075,12 +1077,10 @@ static u32 brcmf_sdio_hostmail(struct brcmf_sdio *bus)
 	brcmf_dbg(SDIO, "Enter\n");
 
 	/* Read mailbox data and ack that we did so */
-	ret = r_sdreg32(bus, &hmb_data,
-			offsetof(struct sdpcmd_regs, tohostmailboxdata));
+	ret = r_sdreg32(bus, &hmb_data,	SD_REG(tohostmailboxdata));
 
 	if (ret == 0)
-		w_sdreg32(bus, SMB_INT_ACK,
-			  offsetof(struct sdpcmd_regs, tosbmailbox));
+		w_sdreg32(bus, SMB_INT_ACK, SD_REG(tosbmailbox));
 	bus->sdcnt.f1regdata += 2;
 
 	/* Dongle recomposed rx frames, accept them again */
@@ -1190,8 +1190,7 @@ static void brcmf_sdio_rxfail(struct brcmf_sdio *bus, bool abort, bool rtx)
 
 	if (rtx) {
 		bus->sdcnt.rxrtx++;
-		err = w_sdreg32(bus, SMB_NAK,
-				offsetof(struct sdpcmd_regs, tosbmailbox));
+		err = w_sdreg32(bus, SMB_NAK, SD_REG(tosbmailbox));
 
 		bus->sdcnt.f1regdata++;
 		if (err == 0)
@@ -2312,9 +2311,7 @@ static uint brcmf_sdio_sendfromq(struct brcmf_sdio *bus, uint maxframes)
 		if (!bus->intr) {
 			/* Check device status, signal pending interrupt */
 			sdio_claim_host(bus->sdiodev->func[1]);
-			ret = r_sdreg32(bus, &intstatus,
-					offsetof(struct sdpcmd_regs,
-						 intstatus));
+			ret = r_sdreg32(bus, &intstatus, SD_REG(intstatus));
 			sdio_release_host(bus->sdiodev->func[1]);
 			bus->sdcnt.f2txdata++;
 			if (ret != 0)
@@ -2420,7 +2417,7 @@ static void brcmf_sdio_bus_stop(struct device *dev)
 		brcmf_sdio_bus_sleep(bus, false, false);
 
 		/* Disable and clear interrupts at the chip level also */
-		w_sdreg32(bus, 0, offsetof(struct sdpcmd_regs, hostintmask));
+		w_sdreg32(bus, 0, SD_REG(hostintmask));
 		local_hostintmask = bus->hostintmask;
 		bus->hostintmask = 0;
 
@@ -2439,8 +2436,7 @@ static void brcmf_sdio_bus_stop(struct device *dev)
 		sdio_disable_func(sdiodev->func[SDIO_FUNC_2]);
 
 		/* Clear any pending interrupts now that F2 is disabled */
-		w_sdreg32(bus, local_hostintmask,
-			  offsetof(struct sdpcmd_regs, intstatus));
+		w_sdreg32(bus, local_hostintmask, SD_REG(intstatus));
 
 		sdio_release_host(sdiodev->func[1]);
 	}
@@ -2486,7 +2482,7 @@ static int brcmf_sdio_intr_rstatus(struct brcmf_sdio *bus)
 	int ret;
 
 	buscore = brcmf_chip_get_core(bus->ci, BCMA_CORE_SDIO_DEV);
-	addr = buscore->base + offsetof(struct sdpcmd_regs, intstatus);
+	addr = buscore->base + SD_REG(intstatus);
 
 	val = brcmf_sdiod_readl(bus->sdiodev, addr, &ret);
 	bus->sdcnt.f1regdata++;
@@ -2563,11 +2559,9 @@ static void brcmf_sdio_dpc(struct brcmf_sdio *bus)
 	 */
 	if (intstatus & I_HMB_FC_CHANGE) {
 		intstatus &= ~I_HMB_FC_CHANGE;
-		err = w_sdreg32(bus, I_HMB_FC_CHANGE,
-				offsetof(struct sdpcmd_regs, intstatus));
+		err = w_sdreg32(bus, I_HMB_FC_CHANGE, SD_REG(intstatus));
 
-		err = r_sdreg32(bus, &newstatus,
-				offsetof(struct sdpcmd_regs, intstatus));
+		err = r_sdreg32(bus, &newstatus, SD_REG(intstatus));
 		bus->sdcnt.f1regdata += 2;
 		atomic_set(&bus->fcstate,
 			   !!(newstatus & (I_HMB_FC_STATE | I_HMB_FC_CHANGE)));
@@ -3750,7 +3744,7 @@ static void brcmf_sdio_buscore_activate(void *ctx, struct brcmf_chip *chip,
 
 	/* clear all interrupts */
 	core = brcmf_chip_get_core(chip, BCMA_CORE_SDIO_DEV);
-	reg_addr = core->base + offsetof(struct sdpcmd_regs, intstatus);
+	reg_addr = core->base + SD_REG(intstatus);
 	brcmf_sdiod_writel(sdiodev, reg_addr, 0xFFFFFFFF, NULL);
 
 	if (rstvec)
@@ -4027,7 +4021,7 @@ static void brcmf_sdio_firmware_callback(struct device *dev, int err,
 
 	/* Enable function 2 (frame transfers) */
 	w_sdreg32(bus, SDPCM_PROT_VERSION << SMB_DATA_VERSION_SHIFT,
-		  offsetof(struct sdpcmd_regs, tosbmailboxdata));
+		  SD_REG(tosbmailboxdata));
 	err = sdio_enable_func(sdiodev->func[SDIO_FUNC_2]);
 
 
@@ -4037,8 +4031,7 @@ static void brcmf_sdio_firmware_callback(struct device *dev, int err,
 	if (!err) {
 		/* Set up the interrupt mask and enable interrupts */
 		bus->hostintmask = HOSTINTMASK;
-		w_sdreg32(bus, bus->hostintmask,
-			  offsetof(struct sdpcmd_regs, hostintmask));
+		w_sdreg32(bus, bus->hostintmask, SD_REG(hostintmask));
 
 		brcmf_sdiod_writeb(sdiodev, SBSDIO_WATERMARK, 8, &err);
 	} else {
