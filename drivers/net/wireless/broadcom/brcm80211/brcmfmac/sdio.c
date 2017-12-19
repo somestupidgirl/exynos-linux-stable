@@ -1140,7 +1140,7 @@ static void brcmf_sdio_rxfail(struct brcmf_sdio *bus, bool abort, bool rtx)
 		  rtx ? ", send NAK" : "");
 
 	if (abort)
-		brcmf_sdiod_abort(bus->sdiodev, SDIO_FUNC_2);
+		brcmf_sdiod_abort(bus->sdiodev, bus->sdiodev->func[2]);
 
 	brcmf_sdiod_writeb(bus->sdiodev, SBSDIO_FUNC1_FRAMECTRL, SFC_RF_TERM,
 			   &err);
@@ -1192,7 +1192,7 @@ static void brcmf_sdio_txfail(struct brcmf_sdio *bus)
 	brcmf_err("sdio error, abort command and terminate frame\n");
 	bus->sdcnt.tx_sderrs++;
 
-	brcmf_sdiod_abort(sdiodev, SDIO_FUNC_2);
+	brcmf_sdiod_abort(sdiodev, sdiodev->func[2]);
 	brcmf_sdiod_writeb(sdiodev, SBSDIO_FUNC1_FRAMECTRL, SFC_WF_TERM, NULL);
 	bus->sdcnt.f1regdata++;
 
@@ -2052,7 +2052,7 @@ static int brcmf_sdio_txpkt_prep_sg(struct brcmf_sdio *bus,
 	int ntail, ret;
 
 	sdiodev = bus->sdiodev;
-	blksize = sdiodev->func[SDIO_FUNC_2]->cur_blksize;
+	blksize = sdiodev->func[2]->cur_blksize;
 	/* sg entry alignment should be a divisor of block size */
 	WARN_ON(blksize % bus->sgentry_align);
 
@@ -2420,7 +2420,7 @@ static void brcmf_sdio_bus_stop(struct device *dev)
 
 		/* Turn off the bus (F2), free any pending packets */
 		brcmf_dbg(INTR, "disable SDIO interrupts\n");
-		sdio_disable_func(sdiodev->func[SDIO_FUNC_2]);
+		sdio_disable_func(sdiodev->func[2]);
 
 		/* Clear any pending interrupts now that F2 is disabled */
 		brcmf_sdiod_writel(sdiodev, core->base + SD_REG(intstatus),
@@ -4026,8 +4026,7 @@ static void brcmf_sdio_firmware_callback(struct device *dev, int err,
 	brcmf_sdiod_writel(sdiod, core->base + SD_REG(tosbmailboxdata),
 			   SDPCM_PROT_VERSION << SMB_DATA_VERSION_SHIFT, NULL);
 
-	err = sdio_enable_func(sdiodev->func[SDIO_FUNC_2]);
-
+	err = sdio_enable_func(sdiodev->func[2]);
 
 	brcmf_dbg(INFO, "enable F2: err=%d\n", err);
 
@@ -4042,7 +4041,7 @@ static void brcmf_sdio_firmware_callback(struct device *dev, int err,
 		brcmf_sdiod_writeb(sdiodev, SBSDIO_WATERMARK, 8, &err);
 	} else {
 		/* Disable F2 again */
-		sdio_disable_func(sdiodev->func[SDIO_FUNC_2]);
+		sdio_disable_func(sdiodev->func[2]);
 		goto release;
 	}
 
@@ -4181,7 +4180,7 @@ struct brcmf_sdio *brcmf_sdio_probe(struct brcmf_sdio_dev *sdiodev)
 	sdio_claim_host(bus->sdiodev->func[1]);
 
 	/* Disable F2 to clear any intermediate frame state on the dongle */
-	sdio_disable_func(bus->sdiodev->func[SDIO_FUNC_2]);
+	sdio_disable_func(bus->sdiodev->func[2]);
 
 	bus->rxflow = false;
 
