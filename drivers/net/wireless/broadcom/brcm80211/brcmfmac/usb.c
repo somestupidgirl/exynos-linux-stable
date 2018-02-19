@@ -1141,27 +1141,6 @@ static const struct brcmf_bus_ops brcmf_usb_bus_ops = {
 	.wowl_config = brcmf_usb_wowl_config,
 };
 
-static int brcmf_usb_bus_setup(struct brcmf_usbdev_info *devinfo)
-{
-	int ret;
-
-	/* Attach to the common driver interface */
-	ret = brcmf_attach(devinfo->dev, devinfo->settings);
-	if (ret) {
-		brcmf_err("brcmf_attach failed\n");
-		return ret;
-	}
-
-	ret = brcmf_bus_started(devinfo->dev);
-	if (ret)
-		goto fail;
-
-	return 0;
-fail:
-	brcmf_detach(devinfo->dev);
-	return ret;
-}
-
 static void brcmf_usb_probe_phase2(struct device *dev, int ret,
 				   const struct firmware *fw,
 				   void *nvram, u32 nvlen)
@@ -1189,7 +1168,8 @@ static void brcmf_usb_probe_phase2(struct device *dev, int ret,
 	if (ret)
 		goto error;
 
-	ret = brcmf_usb_bus_setup(devinfo);
+	/* Attach to the common driver interface */
+	ret = brcmf_attach(devinfo->dev, devinfo->settings);
 	if (ret)
 		goto error;
 
@@ -1239,7 +1219,7 @@ static int brcmf_usb_probe_cb(struct brcmf_usbdev_info *devinfo)
 	}
 
 	if (!brcmf_usb_dlneeded(devinfo)) {
-		ret = brcmf_usb_bus_setup(devinfo);
+		ret = brcmf_attach(devinfo->dev, devinfo->settings);
 		if (ret)
 			goto fail;
 		/* we are done */
@@ -1441,7 +1421,7 @@ static int brcmf_usb_resume(struct usb_interface *intf)
 
 	brcmf_dbg(USB, "Enter\n");
 	if (!devinfo->wowl_enabled)
-		return brcmf_usb_bus_setup(devinfo);
+		return brcmf_attach(devinfo->dev, devinfo->settings);
 
 	devinfo->bus_pub.state = BRCMFMAC_USB_STATE_UP;
 	brcmf_usb_rx_fill_all(devinfo);

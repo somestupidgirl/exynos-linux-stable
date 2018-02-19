@@ -3401,6 +3401,8 @@ static int brcmf_sdio_bus_preinit(struct device *dev)
 	if (bus->rxbuf)
 		bus->rxblen = value;
 
+	brcmf_sdio_debugfs_create(bus);
+
 	/* the commands below use the terms tx and rx from
 	 * a device perspective, ie. bus:txglom affects the
 	 * bus transfers from device to host.
@@ -4093,14 +4095,6 @@ static void brcmf_sdio_firmware_callback(struct device *dev, int err,
 	err = brcmf_attach(sdiodev->dev, sdiodev->settings);
 	if (err != 0) {
 		brcmf_err("brcmf_attach failed\n");
-		goto fail;
-	}
-
-	brcmf_sdio_debugfs_create(bus);
-
-	err = brcmf_bus_started(dev);
-	if (err != 0) {
-		brcmf_err("dongle is not responding\n");
 		goto fail;
 	}
 
