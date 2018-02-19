@@ -3999,9 +3999,8 @@ static void brcmf_sdio_firmware_callback(struct device *dev, int err,
 					 void *nvram, u32 nvram_len)
 {
 	struct brcmf_bus *bus_if = dev_get_drvdata(dev);
-	struct brcmf_sdio_dev *sdiodev = bus_if->bus_priv.sdio;
-	struct brcmf_sdio *bus = sdiodev->bus;
-	struct brcmf_sdio_dev *sdiod = bus->sdiodev;
+	struct brcmf_sdio_dev *sdiod = bus_if->bus_priv.sdio;
+	struct brcmf_sdio *bus = sdiod->bus;
 	struct brcmf_core *core = bus->sdio_core;
 	u8 saveclk;
 
@@ -4021,7 +4020,7 @@ static void brcmf_sdio_firmware_callback(struct device *dev, int err,
 	bus->sdcnt.tickcnt = 0;
 	brcmf_sdio_wd_timer(bus, true);
 
-	sdio_claim_host(sdiodev->func1);
+	sdio_claim_host(sdiod->func1);
 
 	/* Make sure backplane clock is on, needed to generate F2 interrupt */
 	brcmf_sdio_clkctl(bus, CLK_AVAIL, false);
@@ -4029,9 +4028,9 @@ static void brcmf_sdio_firmware_callback(struct device *dev, int err,
 		goto release;
 
 	/* Force clocks on backplane to be sure F2 interrupt propagates */
-	saveclk = brcmf_sdiod_readb(sdiodev, SBSDIO_FUNC1_CHIPCLKCSR, &err);
+	saveclk = brcmf_sdiod_readb(sdiod, SBSDIO_FUNC1_CHIPCLKCSR, &err);
 	if (!err) {
-		brcmf_sdiod_writeb(sdiodev, SBSDIO_FUNC1_CHIPCLKCSR,
+		brcmf_sdiod_writeb(sdiod, SBSDIO_FUNC1_CHIPCLKCSR,
 				   (saveclk | SBSDIO_FORCE_HT), &err);
 	}
 	if (err) {
@@ -4043,7 +4042,7 @@ static void brcmf_sdio_firmware_callback(struct device *dev, int err,
 	brcmf_sdiod_writel(sdiod, core->base + SD_REG(tosbmailboxdata),
 			   SDPCM_PROT_VERSION << SMB_DATA_VERSION_SHIFT, NULL);
 
-	err = sdio_enable_func(sdiodev->func2);
+	err = sdio_enable_func(sdiod->func2);
 
 	brcmf_dbg(INFO, "enable F2: err=%d\n", err);
 
@@ -4055,10 +4054,10 @@ static void brcmf_sdio_firmware_callback(struct device *dev, int err,
 				   bus->hostintmask, NULL);
 
 
-		brcmf_sdiod_writeb(sdiodev, SBSDIO_WATERMARK, 8, &err);
+		brcmf_sdiod_writeb(sdiod, SBSDIO_WATERMARK, 8, &err);
 	} else {
 		/* Disable F2 again */
-		sdio_disable_func(sdiodev->func2);
+		sdio_disable_func(sdiod->func2);
 		goto release;
 	}
 
@@ -4066,7 +4065,7 @@ static void brcmf_sdio_firmware_callback(struct device *dev, int err,
 		brcmf_sdio_sr_init(bus);
 	} else {
 		/* Restore previous clock setting */
-		brcmf_sdiod_writeb(sdiodev, SBSDIO_FUNC1_CHIPCLKCSR,
+		brcmf_sdiod_writeb(sdiod, SBSDIO_FUNC1_CHIPCLKCSR,
 				   saveclk, &err);
 	}
 
@@ -4074,7 +4073,7 @@ static void brcmf_sdio_firmware_callback(struct device *dev, int err,
 		/* Allow full data communication using DPC from now on. */
 		brcmf_sdiod_change_state(bus->sdiodev, BRCMF_SDIOD_DATA);
 
-		err = brcmf_sdiod_intr_register(sdiodev);
+		err = brcmf_sdiod_intr_register(sdiod);
 		if (err != 0)
 			brcmf_err("intr register failed:%d\n", err);
 	}
@@ -4083,16 +4082,16 @@ static void brcmf_sdio_firmware_callback(struct device *dev, int err,
 	if (err != 0)
 		brcmf_sdio_clkctl(bus, CLK_NONE, false);
 
-	sdio_release_host(sdiodev->func1);
+	sdio_release_host(sdiod->func1);
 
 	/* Assign bus interface call back */
-	sdiodev->bus_if->dev = sdiodev->dev;
-	sdiodev->bus_if->ops = &brcmf_sdio_bus_ops;
-	sdiodev->bus_if->chip = bus->ci->chip;
-	sdiodev->bus_if->chiprev = bus->ci->chiprev;
+	sdiod->bus_if->dev = sdiod->dev;
+	sdiod->bus_if->ops = &brcmf_sdio_bus_ops;
+	sdiod->bus_if->chip = bus->ci->chip;
+	sdiod->bus_if->chiprev = bus->ci->chiprev;
 
 	/* Attach to the common layer, reserve hdr space */
-	err = brcmf_attach(sdiodev->dev, sdiodev->settings);
+	err = brcmf_attach(sdiod->dev, sdiod->settings);
 	if (err != 0) {
 		brcmf_err("brcmf_attach failed\n");
 		goto fail;
@@ -4102,10 +4101,10 @@ static void brcmf_sdio_firmware_callback(struct device *dev, int err,
 	return;
 
 release:
-	sdio_release_host(sdiodev->func1);
+	sdio_release_host(sdiod->func1);
 fail:
 	brcmf_dbg(TRACE, "failed: dev=%s, err=%d\n", dev_name(dev), err);
-	device_release_driver(&sdiodev->func2->dev);
+	device_release_driver(&sdiod->func2->dev);
 	device_release_driver(dev);
 }
 
