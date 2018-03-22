@@ -124,6 +124,7 @@ struct brcmf_bus_msgbuf {
  * @chip: device identifier of the dongle chip.
  * @wowl_supported: is wowl supported by bus driver.
  * @chiprev: revision of the dongle chip.
+ * @msgbuf: msgbuf protocol parameters provided by bus layer.
  */
 struct brcmf_bus {
 	union {
