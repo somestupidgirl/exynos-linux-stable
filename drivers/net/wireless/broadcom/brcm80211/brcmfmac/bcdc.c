@@ -374,6 +374,11 @@ static void brcmf_proto_bcdc_rxreorder(struct brcmf_if *ifp,
 	brcmf_fws_rxreorder(ifp, skb);
 }
 
+static void brcmf_proto_bcdc_debugfs_create(struct brcmf_pub *drvr)
+{
+	brcmf_fws_debugfs_create(drvr);
+}
+
 int brcmf_proto_bcdc_attach(struct brcmf_pub *drvr)
 {
 	struct brcmf_bcdc *bcdc;
@@ -397,6 +402,14 @@ int brcmf_proto_bcdc_attach(struct brcmf_pub *drvr)
 	drvr->proto->delete_peer = brcmf_proto_bcdc_delete_peer;
 	drvr->proto->add_tdls_peer = brcmf_proto_bcdc_add_tdls_peer;
 	drvr->proto->rxreorder = brcmf_proto_bcdc_rxreorder;
+<<<<<<< HEAD
+=======
+	drvr->proto->add_if = brcmf_proto_bcdc_add_if;
+	drvr->proto->del_if = brcmf_proto_bcdc_del_if;
+	drvr->proto->reset_if = brcmf_proto_bcdc_reset_if;
+	drvr->proto->init_done = brcmf_proto_bcdc_init_done;
+	drvr->proto->debugfs_create = brcmf_proto_bcdc_debugfs_create;
+>>>>>>> 34789d0cf682c (brcmfmac: use wiphy debugfs dir entry)
 	drvr->proto->pd = bcdc;
 
 	drvr->hdrlen += BCDC_HEADER_LEN + BRCMF_PROT_FW_SIGNAL_MAX_TXBYTES;

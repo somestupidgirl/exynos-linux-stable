@@ -44,6 +44,7 @@ struct brcmf_proto {
 	void (*add_tdls_peer)(struct brcmf_pub *drvr, int ifidx,
 			      u8 peer[ETH_ALEN]);
 	void (*rxreorder)(struct brcmf_if *ifp, struct sk_buff *skb);
+	void (*debugfs_create)(struct brcmf_pub *drvr);
 	void *pd;
 };
 
@@ -118,6 +119,12 @@ static inline void
 brcmf_proto_rxreorder(struct brcmf_if *ifp, struct sk_buff *skb)
 {
 	ifp->drvr->proto->rxreorder(ifp, skb);
+}
+
+static inline void
+brcmf_proto_debugfs_create(struct brcmf_pub *drvr)
+{
+	drvr->proto->debugfs_create(drvr);
 }
 
 #endif /* BRCMFMAC_PROTO_H */

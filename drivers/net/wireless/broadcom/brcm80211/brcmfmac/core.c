@@ -968,8 +968,6 @@ static int brcmf_bus_started(struct brcmf_pub *drvr, struct cfg80211_ops *ops)
 	if (ret < 0)
 		goto fail;
 
-	brcmf_debugfs_add_entry(drvr, "revinfo", brcmf_revinfo_read);
-
 	brcmf_feat_attach(drvr);
 
 	ret = brcmf_fws_init(drvr);
@@ -1011,6 +1009,11 @@ static int brcmf_bus_started(struct brcmf_pub *drvr, struct cfg80211_ops *ops)
 	}
 #endif
 #endif /* CONFIG_INET */
+
+	/* populate debugfs */
+	brcmf_debugfs_add_entry(drvr, "revinfo", brcmf_revinfo_read);
+	brcmf_feat_debugfs_create(drvr);
+	brcmf_proto_debugfs_create(drvr);
 
 	return 0;
 
@@ -1067,9 +1070,6 @@ int brcmf_attach(struct device *dev, struct brcmf_mp_device *settings)
 	drvr->bus_if = dev_get_drvdata(dev);
 	drvr->bus_if->drvr = drvr;
 	drvr->settings = settings;
-
-	/* attach debug facilities */
-	brcmf_debug_attach(drvr);
 
 	/* Attach and link in the protocol */
 	ret = brcmf_proto_attach(drvr);
@@ -1172,7 +1172,6 @@ void brcmf_detach(struct device *dev)
 
 	brcmf_proto_detach(drvr);
 
-	brcmf_debug_detach(drvr);
 	bus_if->drvr = NULL;
 	wiphy_free(drvr->wiphy);
 }
