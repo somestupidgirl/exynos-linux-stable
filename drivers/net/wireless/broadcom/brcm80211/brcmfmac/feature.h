@@ -34,6 +34,7 @@
  * GSCAN: enhanced scan offload feature.
  * FWSUP: Firmware supplicant.
  * MONITOR: firmware can pass monitor packets to host.
+ * MONITOR_FLAG: firmware flags monitor packets.
  * MONITOR_FMT_RADIOTAP: firmware provides monitor packets with radiotap header
  */
 #define BRCMF_FEAT_LIST \
@@ -52,6 +53,7 @@
 	BRCMF_FEAT_DEF(GSCAN) \
 	BRCMF_FEAT_DEF(FWSUP) \
 	BRCMF_FEAT_DEF(MONITOR) \
+	BRCMF_FEAT_DEF(MONITOR_FLAG) \
 	BRCMF_FEAT_DEF(MONITOR_FMT_RADIOTAP)
 
 /*
