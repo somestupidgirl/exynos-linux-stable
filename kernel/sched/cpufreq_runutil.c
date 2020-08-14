@@ -19,6 +19,13 @@
 #include "sched.h"
 #include "tune.h"
 
+#ifdef LATENCY_MULTIPLIER
+#undef LATENCY_MULTIPLIER
+#define LATENCY_MULTIPLIER  (500)
+#else
+#define LATENCY_MULTIPLIER  (500)
+#endif
+
 #define SUGOV_KTHREAD_PRIORITY	50
 
 struct sugov_tunables {
