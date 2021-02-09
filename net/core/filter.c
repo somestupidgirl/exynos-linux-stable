@@ -2391,6 +2391,8 @@ static u32 __bpf_skb_min_len(const struct sk_buff *skb)
 	return min_len;
 }
 
+#define BPF_SKB_MAX_LEN SKB_MAX_ALLOC
+
 static int bpf_skb_grow_rcsum(struct sk_buff *skb, unsigned int new_len)
 {
 	unsigned int old_len = skb->len;
