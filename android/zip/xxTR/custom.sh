@@ -164,5 +164,9 @@ elif [ $HOTPLUG = 10 ]; then
   echo "    write /sys/devices/system/cpu/cpufreq/policy4/schedutil/exp_util 1" >> $init_mod
 fi;
 
+# Kernelspace battery saver
+  echo "    chown system system /sys/module/battery_saver/parameters/enabled" >> $init_mod
+  echo "    chmod 0660 /sys/module/battery_saver/parameters/enabled" >> $init_mod
+
 echo "# End of script" >> $init_mod
 # end ramdisk changes
