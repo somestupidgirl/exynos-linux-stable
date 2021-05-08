@@ -41,6 +41,8 @@ extern void calc_global_load_tick(struct rq *this_rq);
 extern long calc_load_fold_active(struct rq *this_rq, long adjust);
 extern void set_rq_online(struct rq *rq);
 
+extern unsigned int sched_ravg_window;
+
 #ifdef CONFIG_SMP
 extern void cpu_load_update_active(struct rq *this_rq);
 #else
