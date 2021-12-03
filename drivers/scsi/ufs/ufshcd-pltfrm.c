@@ -404,8 +404,6 @@ int ufshcd_pltfrm_init(struct platform_device *pdev,
 		goto out_disable_rpm;
 	}
 
-	platform_set_drvdata(pdev, hba);
-
 	return 0;
 
 out_disable_rpm:
