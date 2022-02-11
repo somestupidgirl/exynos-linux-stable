@@ -194,10 +194,9 @@
 #include <linux/syscalls.h>
 #include <linux/completion.h>
 #include <linux/uuid.h>
+#include <linux/freezer.h>
 #include <crypto/chacha20.h>
 #include <crypto/blake2s.h>
-#include <linux/freezer.h>
-
 #include <asm/processor.h>
 #include <asm/uaccess.h>
 #include <asm/irq.h>
