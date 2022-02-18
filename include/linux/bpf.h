@@ -421,6 +421,10 @@ static inline int bpf_map_attr_numa_node(const union bpf_attr *attr)
 		attr->numa_node : NUMA_NO_NODE;
 }
 
+static inline bool unprivileged_ebpf_enabled(void)
+{
+	return !sysctl_unprivileged_bpf_disabled;
+}
 #else
 static inline struct bpf_prog *bpf_prog_get(u32 ufd)
 {
@@ -445,6 +449,11 @@ static inline void bpf_prog_put(struct bpf_prog *prog)
 static inline struct bpf_prog * __must_check bpf_prog_inc(struct bpf_prog *prog)
 {
 	return ERR_PTR(-EOPNOTSUPP);
+}
+
+static inline bool unprivileged_ebpf_enabled(void)
+{
+	return false;
 }
 
 static inline struct bpf_prog *__must_check
