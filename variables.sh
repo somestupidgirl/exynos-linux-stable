@@ -2,7 +2,8 @@
 
 CUR_DIR=$PWD
 
-ZIP_DIR="/home/$USER/Android/Kernel/Zip"
+ZIP_DIR="$CUR_DIR/zip"
+BOOT_DIR="$ZIP_DIR/Boot"
 KERNEL_NAME="Kernel"
 DTB_NAME="Dtb"
 
