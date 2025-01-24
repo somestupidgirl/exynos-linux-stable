@@ -1,0 +1,10 @@
+#!/bin/bash
+
+if [[ -e 'split' || -e '.img' || -e 'ramdisk' ]]
+then
+    rm -rf split .img ramdisk
+    echo '[+]Workspace cleaned'
+else
+    echo '[!]Nothing to clean'
+fi
+

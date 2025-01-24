@@ -33,7 +33,7 @@ tc_setup() {
 	fi
 }
 
-export PATH=$CUR_DIR/toolchain/clang/bin:$CUR_DIR/toolchain/clang/lib:${PATH}
+export PATH=$CUR_DIR/toolchain/clang/bin:$CUR_DIR/toolchain/clang/lib:$CUR_DIR/zip/Boot/AIK-magisk/bin:${PATH}
 export CLANG_TRIPLE=$CUR_DIR/toolchain/clang/bin/aarch64-linux-gnu-
 export CROSS_COMPILE=$CUR_DIR/toolchain/clang/bin/aarch64-linux-gnu-
 export CROSS_COMPILE_ARM32=$CUR_DIR/toolchain/clang/bin/arm-linux-gnueabi-

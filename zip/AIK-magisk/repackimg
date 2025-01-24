@@ -1,0 +1,35 @@
+#!/bin/bash
+
+source funcs.sh
+chkarch
+banner
+RPWD=`pwd`
+IMG="$RPWD/split/source.img"
+RDTYPE=`cat $RPWD/split/ramdisk_compression`
+[ "$RDTYPE" == 'zst' ] && RDTYPE='zstd'
+
+if [[ -d $RPWD/ramdisk ]]
+then
+    cd $RPWD/ramdisk
+    TMP=$RPWD/split/ramdiskcpio.tmp
+    RAMDISK=$RPWD/split/ramdisk.cpio
+    find . | cpio -H newc -o > $TMP
+    if [[ "$RDTYPE" == 'Unknown' || "$RDTYPE" == 'cpio' ]]; then
+        mv $TMP $RAMDISK
+    else
+        $RDTYPE -c $TMP > $RAMDISK
+        rm $TMP
+    fi
+fi
+
+if [[ -f "$IMG" ]]
+then
+    cd $RPWD/split
+    sleep 1
+    $MAGISKBOOT repack $IMG
+    mv new-boot.img ..
+else
+    usage
+    exit 1
+fi
+
