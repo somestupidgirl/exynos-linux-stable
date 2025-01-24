@@ -145,3 +145,11 @@ kernel/configs/android-*.cfg
 
 # KSU
 drivers/kernelsu
+
+# Clang
+toolchain/clang
+
+# Output files
+zip/Kernel
+zip/Out
+zip/Aroma/Kernel.tar.zst
