@@ -1,26 +1,55 @@
 #!/bin/bash
 
-export PATH=/home/$USER/Android/Toolchains/clang/bin:/home/$USER/Android/Toolchains/clang/lib:${PATH}
-export CLANG_TRIPLE=/home/$USER/Android/Toolchains/clang/bin/aarch64-linux-gnu-
-export CROSS_COMPILE=/home/$USER/Android/Toolchains/clang/bin/aarch64-linux-gnu-
-export CROSS_COMPILE_ARM32=/home/$USER/Android/Toolchains/clang/bin/arm-linux-gnueabi-
-export CC=/home/$USER/Android/Toolchains/clang/bin/clang
-export REAL_CC=/home/$USER/Android/Toolchains/clang/bin/clang
-export LD=/home/$USER/Android/Toolchains/clang/bin/ld.lld
-export AR=/home/$USER/Android/Toolchains/clang/bin/llvm-ar
-export NM=/home/$USER/Android/Toolchains/clang/bin/llvm-nm
-export OBJCOPY=/home/$USER/Android/Toolchains/clang/bin/llvm-objcopy
-export OBJDUMP=/home/$USER/Android/Toolchains/clang/bin/llvm-objdump
-export READELF=/home/$USER/Android/Toolchains/clang/bin/llvm-readelf
-export STRIP=/home/$USER/Android/Toolchains/clang/bin/llvm-strip
+CUR_DIR=$PWD
+
+ZIP_DIR="/home/$USER/Android/Kernel/Zip"
+KERNEL_NAME="Kernel"
+DTB_NAME="Dtb"
+
+tc_setup() {
+	if [ ! -d $CUR_DIR/toolchain/clang ]; then
+  		mkdir -p mkdir $CUR_DIR/toolchain/clang
+	fi
+	
+	if [ ! -f $CUR_DIR/toolchain/clang/bin/clang ]; then
+		printf "Fetching clang...\n"
+		curl https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/tags/android-15.0.0_r12/clang-r536225.tar.gz --output $CUR_DIR/toolchain/clang/clang.tar.gz
+	 	cd $CUR_DIR/toolchain/clang && tar xzvf clang.tar.gz && rm clang.tar.gz && cd $CUR_DIR
+	fi
+
+	if [ ! -d $CUR_DIR/toolchain/clang/aarch64-linux-gnu ]; then
+		printf "Copying binutils...\n"
+		cp -r $CUR_DIR/toolchain/binutils/* $CUR_DIR/toolchain/clang
+	fi
+
+	if [ -f $CUR_DIR/toolchain/clang/bin/clang ] && [ -d $CUR_DIR/toolchain/clang/aarch64-linux-gnu ]; then
+		printf "Toolchain is ready at: $CUR_DIR/toolchain/clang\n"
+		printf "Clang version: 19.0.1\n"
+		printf "Binutils version: 2.43\n"
+	else
+		printf "ERROR: Toolchain: Something went wrong.\n"
+		exit 1
+	fi
+}
+
+export PATH=$CUR_DIR/toolchain/clang/bin:$CUR_DIR/toolchain/clang/lib:${PATH}
+export CLANG_TRIPLE=$CUR_DIR/toolchain/clang/bin/aarch64-linux-gnu-
+export CROSS_COMPILE=$CUR_DIR/toolchain/clang/bin/aarch64-linux-gnu-
+export CROSS_COMPILE_ARM32=$CUR_DIR/toolchain/clang/bin/arm-linux-gnueabi-
+export CC=$CUR_DIR/toolchain/clang/bin/clang
+export REAL_CC=$CUR_DIR/toolchain/clang/bin/clang
+export LD=$CUR_DIR/toolchain/clang/bin/ld.lld
+export AR=$CUR_DIR/toolchain/clang/bin/llvm-ar
+export NM=$CUR_DIR/toolchain/clang/bin/llvm-nm
+export OBJCOPY=$CUR_DIR/toolchain/clang/bin/llvm-objcopy
+export OBJDUMP=$CUR_DIR/toolchain/clang/bin/llvm-objdump
+export READELF=$CUR_DIR/toolchain/clang/bin/llvm-readelf
+export STRIP=$CUR_DIR/toolchain/clang/bin/llvm-strip
+
 export LLVM=1 && export LLVM_IAS=1
 export KALLSYMS_EXTRA_PASS=1
 
 export ARCH=arm64 && export SUBARCH=arm64
-ZIP_DIR="/home/$USER/Android/Kernel/Zip"
-KERNEL_NAME="Kernel"
-DTB_NAME="Dtb"
-CUR_DIR=$PWD
 
 dts_ext4() {
 		printf "EXT4 Dts\n"
