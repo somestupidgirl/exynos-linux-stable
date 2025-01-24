@@ -1,0 +1,447 @@
+﻿### LICENSE:
+#
+# Copyright (C) 2011 Ahmad Amarullah ( http://amarullz.com/ )
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+###
+
+ini_set("rom_name",             "xxTR Kernel");
+ini_set("rom_version",          "xxTR");
+ini_set("rom_author",           "xxmustafacooTR");
+ini_set("rom_device",           "Samsung Galaxy S9/S9+/N9");
+ini_set("rom_date",             "Always for Latest");
+
+ini_set("force_colorspace","rgba");
+#ini_set("dp","6");
+
+fontresload( "0", "ttf/Roboto-Regular.ttf", "12" );
+fontresload( "1", "ttf/Roboto-Regular.ttf", "18" );
+
+anisplash(
+    2,
+    "splash/xxmustafacooTR (1)", 20,
+	"splash/xxmustafacooTR (2)", 20,
+	"splash/xxmustafacooTR (3)", 20,
+	"splash/xxmustafacooTR (4)", 20,
+	"splash/xxmustafacooTR (5)", 20,
+	"splash/xxmustafacooTR (6)", 20,
+	"splash/xxmustafacooTR (7)", 20,
+	"splash/xxmustafacooTR (8)", 20,
+	"splash/xxmustafacooTR (9)", 20,
+	"splash/xxmustafacooTR (10)", 20,
+	"splash/xxmustafacooTR (11)", 20,
+	"splash/xxmustafacooTR (12)", 20,
+	"splash/xxmustafacooTR (13)", 20,
+	"splash/xxmustafacooTR (14)", 20,
+	"splash/xxmustafacooTR (15)", 20,
+	"splash/xxmustafacooTR (16)", 20,
+	"splash/xxmustafacooTR (17)", 20,
+	"splash/xxmustafacooTR (18)", 20,
+	"splash/xxmustafacooTR (19)", 20,
+	"splash/xxmustafacooTR (20)", 20,
+	"splash/xxmustafacooTR (21)", 20,
+	"splash/xxmustafacooTR (22)", 20,
+	"splash/xxmustafacooTR (23)", 20,
+	"splash/xxmustafacooTR (24)", 20,
+	"splash/xxmustafacooTR (25)", 20,
+	"splash/xxmustafacooTR (26)", 20,
+	"splash/xxmustafacooTR (27)", 20,
+	"splash/xxmustafacooTR (28)", 20,
+	"splash/xxmustafacooTR (29)", 20,
+	"splash/xxmustafacooTR (30)", 20,
+	"splash/xxmustafacooTR (31)", 20
+);
+theme("xxmustafacooTR");
+
+
+viewbox(
+    "\nxxmustafacooTR",
+
+    "<@center>\nfor <b>" + ini_get("rom_device") + "               </b>\n\n</@>" +
+    "\n\n\n\n  VERSION\t: <b><#selectbg_g>"+ini_get("rom_version")+"</#></b>\n" +
+    "  AUTHOR \t: <b><#selectbg_g>"+ini_get("rom_author")+"</#></b>\n" +
+    "  RELEASED\t: <b><#selectbg_g>"+ini_get("rom_date")+"</#></b>\n\n\n" +
+    "Press Next to Continue...",
+
+    "@welcome"
+);
+
+
+agreebox(
+   "\nTerms Of Use",
+   "<@center>\nPlease read the kernel terms of use\n\n</@>",
+   "",
+   "" + readfile_aroma("agreement.txt"),
+   "I agree with these terms of use",
+   "<@center>\nYou must accept the terms</@>"
+);
+
+if zipread("include") == "empty" then
+    selectbox(
+      "\nBoot Image","<@center><b>\nClean Boot Img or Not\n</b></@>","","boot.prop",
+      "NOT AVAILABLE","Don't Select This",0,
+      "CLEAN KERNELSU","Root method replaced",0,
+	  "DIRTY KERNELSU","Recommended\nRoot method added",1,
+      "NOT AVAILABLE","Don't Select This",0
+    );
+else
+if zipread("include-ksu") == "empty" then
+    selectbox(
+      "\nBoot Image","<@center><b>\nClean Boot Img or Not\n</b></@>","","boot.prop",
+      "CLEAN","Root method deleted",0,
+      "NOT AVAILABLE","Don't Select This",0,
+	  "NOT AVAILABLE","Don't Select This",0,
+      "DIRTY","Recommended\nModify Current Boot Image so keep your magisk if exists",1
+    );
+else
+selectbox(
+  "\nBoot Image","<@center><b>\nClean Boot Img or Not\n</b></@>","","boot.prop",
+  "CLEAN","Root method deleted",0,
+  "CLEAN KERNELSU","Root method replaced",0,
+  "DIRTY KERNELSU","Recommended\nRoot method added",1,
+  "DIRTY","Recommended\nModify Current Boot Image so keep your magisk if exists",0
+);
+endif;
+endif;
+
+if zipread("dts") == "ext4" then
+    selectbox(
+      "\nFilesystem","<@center><b>\nFstab of root dirs\n</b></@>","","dts.prop",
+      "EXT4","System/Vendor/Odm replaced to ext4",1,
+	  "NOT AVAILABLE","Don't Select This",0
+    );
+else
+if zipread("dts") == "erofs" then
+    selectbox(
+      "\nFilesystem","<@center><b>\nFstab of root dirs\n</b></@>","","dts.prop",
+      "NOT AVAILABLE","Don't Select This",0,
+      "EROFS","System/Vendor/Odm replaced to erofs\nMagisk may not work",1
+    );
+else
+selectbox(
+  "\nFilesystem","<@center><b>\nFstab of root dirs\n</b></@>","","dts.prop",
+  "EXT4","System/Vendor/Odm replaced to ext4",1,
+  "EROFS","System/Vendor/Odm replaced to erofs\nMagisk may not work",0
+);
+endif;
+endif;
+
+if file_getprop("/tmp/aroma/boot.prop","selected.0") == "2" then
+
+if zipread("include-ksu") == "kernel+stock+aosp" then
+	selectbox(
+	  "\nROM","<@center><b>\nSelect kernel for your rom\n</b></@>","","rom.prop",
+	  "LATEST","Always for latest roms\nFor NOBLE 2.A and NOBLE 3.0 Upper supported",1,
+	  "STOCK","For Stock OneUI2.5 Rom",0,
+	  "AOSP","For AOSP Based Roms\nUse DFE and Format data using twrp again",0
+	);
+endif;
+if zipread("include-ksu") == "kernel+stock" then
+	selectbox(
+	  "\nROM","<@center><b>\nSelect kernel for your rom\n</b></@>","","rom.prop",
+	  "LATEST","Always for latest roms\nFor NOBLE 2.A and NOBLE 3.0 Upper supported",1,
+	  "STOCK","For Stock OneUI2.5 Rom",0
+	);
+endif;
+if zipread("include-ksu") == "kernel" then
+	selectbox(
+	  "\nROM","<@center><b>\nSelect kernel for your rom\n</b></@>","","rom.prop",
+	  "LATEST","Always for latest roms\nFor NOBLE 2.A and NOBLE 3.0 Upper supported",1
+	);
+endif;
+
+else
+
+if file_getprop("/tmp/aroma/boot.prop","selected.0") == "3" then
+
+if zipread("include-ksu") == "kernel+stock+aosp" then
+	selectbox(
+	  "\nROM","<@center><b>\nSelect kernel for your rom\n</b></@>","","rom.prop",
+	  "LATEST","Always for latest roms\nFor NOBLE 2.A and NOBLE 3.0 Upper supported",1,
+	  "STOCK","For Stock OneUI2.5 Rom",0,
+	  "AOSP","For AOSP Based Roms\nUse DFE and Format data using twrp again",0
+	);
+endif;
+if zipread("include-ksu") == "kernel+stock" then
+	selectbox(
+	  "\nROM","<@center><b>\nSelect kernel for your rom\n</b></@>","","rom.prop",
+	  "LATEST","Always for latest roms\nFor NOBLE 2.A and NOBLE 3.0 Upper supported",1,
+	  "STOCK","For Stock OneUI2.5 Rom",0
+	);
+endif;
+if zipread("include-ksu") == "kernel" then
+	selectbox(
+	  "\nROM","<@center><b>\nSelect kernel for your rom\n</b></@>","","rom.prop",
+	  "LATEST","Always for latest roms\nFor NOBLE 2.A and NOBLE 3.0 Upper supported",1
+	);
+endif;
+
+else
+
+if zipread("include") == "kernel+stock+aosp" then
+	selectbox(
+	  "\nROM","<@center><b>\nSelect kernel for your rom\n</b></@>","","rom.prop",
+	  "LATEST","Always for latest roms\nFor NOBLE 2.A and NOBLE 3.0 Upper supported",1,
+	  "STOCK","For Stock OneUI2.5 Rom\nNote: Encryption not supported",0,
+	  "AOSP","For AOSP Based Roms\nUse DFE and Format data using twrp again",0
+	);
+endif;
+if zipread("include") == "kernel+stock" then
+	selectbox(
+	  "\nROM","<@center><b>\nSelect kernel for your rom\n</b></@>","","rom.prop",
+	  "LATEST","Always for latest roms\nFor NOBLE 2.A and NOBLE 3.0 Upper supported",1,
+	  "STOCK","For Stock OneUI2.5 Rom\nNote: Encryption not supported",0
+	);
+endif;
+if zipread("include") == "kernel" then
+	selectbox(
+	  "\nROM","<@center><b>\nSelect kernel for your rom\n</b></@>","","rom.prop",
+	  "LATEST","Always for latest roms\nFor NOBLE 2.A and NOBLE 3.0 Upper supported",1
+	);
+endif;
+
+endif;
+endif;
+
+selectbox(
+  "\nSelinux","<@center><b>\nChange Your Selinux\n</b></@>","","selinux.prop",
+  "PERMISSIVE","Set Selinux To Permissive which is needed for ported roms",1,
+  "FAKE ENFORCING","Set Selinux To Permissive but Fake It As Enforce",0,
+  "ENFORCING","Set Selinux To Enforce which is needed for stock roms",0,
+  "DEFAULT","Android System Controls Selinux so Enforcing but changable",0
+);
+
+if file_getprop("/tmp/aroma/dts.prop","selected.0") == "2" then
+selectbox(
+"\nBIG CPU HotPlug Frequencies","<@center><b>\nIF YOU ALREADY CONVERTED TO EROFS,\nTHESE SETTING MIGHT NOT CHANGE\n</b></@>","","hotplug.prop",
+  "OC++","BIG Dual: 2704mhz\nBIG Triple: 2314mhz\nBIG Quad: 2314mhz",0,
+  "OC+","BIG Dual: 2652mhz\nBIG Triple: 2106mhz\nBIG Quad: 2106mhz",0,
+  "OC","BIG Dual: 2652mhz\nBIG Triple: 2002mhz\nBIG Quad: 2002mhz",0,
+  "Stock+","BIG Dual: 2496mhz\nBIG Triple: 1794mhz\nBIG Quad: 1794mhz",1,
+  "Stock","BIG Dual: 2314mhz\nBIG Triple: 1794mhz\nBIG Quad: 1794mhz",0,
+  "Stock-","BIG Dual: 2106mhz\nBIG Triple: 1690mhz\nBIG Quad: 1690mhz",0,
+  "UC","BIG Dual: 2002mhz\nBIG Triple: 1586mhz\nBIG Quad: 1586mhz",0,
+  "UC-","BIG Dual: 1924mhz\nBIG Triple: 1469mhz\nBIG Quad: 1469mhz",0,
+  "UC--","BIG Dual: 1794mhz\nBIG Triple: 1261mhz\nBIG Quad: 1261mhz",0,
+  "DISABLED","NOT RECOMMENDED\nDisable HotPlug After Boot\nBIG Max: Your Selection",0
+);
+else
+selectbox(
+"\nBIG CPU HotPlug Frequencies","<@center><b>\nSelect Freqs Which You Want\n</b></@>","","hotplug.prop",
+  "OC++","BIG Dual: 2704mhz\nBIG Triple: 2314mhz\nBIG Quad: 2314mhz",0,
+  "OC+","BIG Dual: 2652mhz\nBIG Triple: 2106mhz\nBIG Quad: 2106mhz",0,
+  "OC","BIG Dual: 2652mhz\nBIG Triple: 2002mhz\nBIG Quad: 2002mhz",0,
+  "Stock+","BIG Dual: 2496mhz\nBIG Triple: 1794mhz\nBIG Quad: 1794mhz",1,
+  "Stock","BIG Dual: 2314mhz\nBIG Triple: 1794mhz\nBIG Quad: 1794mhz",0,
+  "Stock-","BIG Dual: 2106mhz\nBIG Triple: 1690mhz\nBIG Quad: 1690mhz",0,
+  "UC","BIG Dual: 2002mhz\nBIG Triple: 1586mhz\nBIG Quad: 1586mhz",0,
+  "UC-","BIG Dual: 1924mhz\nBIG Triple: 1469mhz\nBIG Quad: 1469mhz",0,
+  "UC--","BIG Dual: 1794mhz\nBIG Triple: 1261mhz\nBIG Quad: 1261mhz",0,
+  "DISABLED","NOT RECOMMENDED\nDisable HotPlug After Boot\nBIG Max: Your Selection",0
+);
+endif;
+if file_getprop("/tmp/aroma/hotplug.prop","selected.0") == "1" then
+  selectbox(
+  "\nBIG CPU Max Frequency","<@center><b>\nSelect Freq Which You Want\nThis Setting Menu Depends On Hotplug Menu\n</b></@>","","bigcpumax.prop",
+  "2886mhz","",1,
+  "2860mhz","",0,
+  "2704mhz","",0
+  );
+endif;
+if file_getprop("/tmp/aroma/hotplug.prop","selected.0") == "2" then
+  selectbox(
+  "\nBIG CPU Max Frequency","<@center><b>\nSelect Freq Which You Want\nThis Setting Menu Depends On Hotplug Menu\n</b></@>","","bigcpumax.prop",
+  "2886mhz","",1,
+  "2860mhz","",0,
+  "2704mhz","",0,
+  "2652mhz","",0
+  );
+endif;
+if file_getprop("/tmp/aroma/hotplug.prop","selected.0") == "3" then
+  selectbox(
+  "\nBIG CPU Max Frequency","<@center><b>\nSelect Freq Which You Want\nThis Setting Menu Depends On Hotplug Menu\n</b></@>","","bigcpumax.prop",
+  "2886mhz","",1,
+  "2860mhz","",0,
+  "2704mhz","",0,
+  "2652mhz","",0
+  );
+endif;
+
+if file_getprop("/tmp/aroma/hotplug.prop","selected.0") == "4" then
+  selectbox(
+  "\nBIG CPU Max Frequency","<@center><b>\nSelect Freq Which You Want\nThis Setting Menu Depends On Hotplug Menu\n</b></@>","","bigcpumax.prop",
+  "2886mhz","",1,
+  "2860mhz","",0,
+  "2704mhz","",0,
+  "2652mhz","",0,
+  "2496mhz","",0
+  );
+endif;
+
+if file_getprop("/tmp/aroma/hotplug.prop","selected.0") == "5" then
+  selectbox(
+  "\nBIG CPU Max Frequency","<@center><b>\nSelect Freq Which You Want\nThis Setting Menu Depends On Hotplug Menu\n</b></@>","","bigcpumax.prop",
+  "2886mhz","",1,
+  "2860mhz","",0,
+  "2704mhz","",0,
+  "2652mhz","",0,
+  "2496mhz","",0,
+  "2314mhz","",0
+  );
+endif;
+
+if file_getprop("/tmp/aroma/hotplug.prop","selected.0") == "6" then
+  selectbox(
+  "\nBIG CPU Max Frequency","<@center><b>\nSelect Freq Which You Want\nThis Setting Menu Depends On Hotplug Menu\n</b></@>","","bigcpumax.prop",
+  "2886mhz","",1,
+  "2860mhz","",0,
+  "2704mhz","",0,
+  "2652mhz","",0,
+  "2496mhz","",0,
+  "2314mhz","",0,
+  "2106mhz","",0
+  );
+endif;
+
+if file_getprop("/tmp/aroma/hotplug.prop","selected.0") == "7" then
+  selectbox(
+  "\nBIG CPU Max Frequency","<@center><b>\nSelect Freq Which You Want\nThis Setting Menu Depends On Hotplug Menu\n</b></@>","","bigcpumax.prop",
+  "2886mhz","",1,
+  "2860mhz","",0,
+  "2704mhz","",0,
+  "2652mhz","",0,
+  "2496mhz","",0,
+  "2314mhz","",0,
+  "2106mhz","",0,
+  "2002mhz","",0
+  );
+endif;
+
+if file_getprop("/tmp/aroma/hotplug.prop","selected.0") == "8" then
+  selectbox(
+  "\nBIG CPU Max Frequency","<@center><b>\nSelect Freq Which You Want\nThis Setting Menu Depends On Hotplug Menu\n</b></@>","","bigcpumax.prop",
+  "2886mhz","",1,
+  "2860mhz","",0,
+  "2704mhz","",0,
+  "2652mhz","",0,
+  "2496mhz","",0,
+  "2314mhz","",0,
+  "2106mhz","",0,
+  "2002mhz","",0,
+  "1924mhz","",0
+  );
+endif;
+
+if file_getprop("/tmp/aroma/hotplug.prop","selected.0") == "9" then
+  selectbox(
+  "\nBIG CPU Max Frequency","<@center><b>\nSelect Freq Which You Want\nThis Setting Menu Depends On Hotplug Menu\n</b></@>","","bigcpumax.prop",
+  "2886mhz","",1,
+  "2860mhz","",0,
+  "2704mhz","",0,
+  "2652mhz","",0,
+  "2496mhz","",0,
+  "2314mhz","",0,
+  "2106mhz","",0,
+  "2002mhz","",0,
+  "1924mhz","",0,
+  "1794mhz","",0
+  );
+endif;
+
+if file_getprop("/tmp/aroma/hotplug.prop","selected.0") == "10" then
+selectbox(
+  "\nBIG CPU Max Frequency","<@center><b>\nSelect Freq Which You Want\nThis Setting Menu Depends On Hotplug Menu\n</b></@>","","bigcpumax.prop",
+  "2886mhz","",1,
+  "2860mhz","",0,
+  "2704mhz","",0,
+  "2652mhz","",0,
+  "2496mhz","",0,
+  "2314mhz","",0,
+  "2106mhz","",0,
+  "2002mhz","",0,
+  "1924mhz","",0,
+  "1794mhz","",0,
+  "1690mhz","",0,
+  "1586mhz","",0,
+  "1469mhz","",0,
+  "1261mhz","",0,
+  "1170mhz","",0,
+  "1066mhz","",0
+);
+endif;
+
+selectbox(
+  "\nBIG CPU Min Frequency","<@center><b>\nSelect Freq Which You Want\n</b></@>","","bigcpumin.prop",
+  "962mhz","",0,
+  "858mhz","",0,
+  "741mhz","",0,
+  "650mhz","",0,
+  "598mhz","",1
+);
+
+selectbox(
+  "\nLITTLE CPU Max Frequency","<@center><b>\nSelect Freq Which You Want\n</b></@>","","littlecpumax.prop",
+  "2002mhz","",1,
+  "1950mhz","",0,
+  "1794mhz","",0,
+  "1690mhz","",0,
+  "1456mhz","",0,
+  "1248mhz","",0,
+  "1053mhz","",0
+);
+
+selectbox(
+  "\nLITTLE CPU Min Frequency","<@center><b>\nSelect Freq Which You Want\n</b></@>","","littlecpumin.prop",
+  "949mhz","",0,
+  "832mhz","",0,
+  "715mhz","",0,
+  "598mhz","",0,
+  "455mhz","",0,
+  "299mhz","",0,
+  "208mhz","",1
+);
+
+menubox(
+  "\nKernel Installer",
+  "<@center>\nReady to install\n\n</@>",
+  "",
+  "menu.prop",
+  "Install Kernel","","@install",
+  "Abort installation","","@trash"
+);
+
+if prop("menu.prop","selected")=="2"
+then
+  exit("");
+endif;
+
+setvar("retstatus",
+install(
+  "\nInstalling",
+  "<@center>\nInstalling Kernel...\nPlease wait...</@>",
+  "")
+);
+
+ini_set("text_next", "Finish");
+
+if getvar("retstatus")=="0" then
+  viewbox(
+  "\nInstallation Completed",
+  "<@center>\nCongratulations!\n"+
+  "Kernel has been successfully installed\n\n\n</@>",
+  ""
+);
+else
+   viewbox("Installation Failed","\n\nInstaller Status: "+ getvar("retstatus"),"@warning");
+endif;

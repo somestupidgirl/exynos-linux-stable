@@ -1,0 +1,23 @@
+# Copyright (C) 2012 The Android Open Source Project
+#
+# IMPORTANT: Do not create world writable files or directories.
+# This is a common source of Android security bugs.
+#
+
+# KERNEL SETTINGS
+on init
+    chown system system /sys/power/cpuhotplug/governor/dual_freq
+    chown system system /sys/power/cpuhotplug/governor/triple_freq
+    chown system system /sys/power/cpuhotplug/governor/quad_freq
+    chown system system /sys/power/cpuhotplug/governor/dual_freq
+    chmod /sys/power/cpuhotplug/governor/dual_freq
+    chown system system /sys/power/cpuhotplug/governor/triple_freq
+    chmod /sys/power/cpuhotplug/governor/triple_freq
+    chown system system /sys/power/cpuhotplug/governor/quad_freq
+    chmod /sys/power/cpuhotplug/governor/quad_freq
+	write /sys/kernel/mm/ksm/deferred_timer 1
+	write /dev/watchdog "V"
+	write /dev/watchdog0 "V"
+	write /dev/watchdog1 "V"
+	write /sys/bus/workqueue/devices/writeback/cpumask "f0"
+	write /proc/irq/default_smp_affinity "f0"
