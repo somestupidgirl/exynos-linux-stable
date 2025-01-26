@@ -483,7 +483,7 @@ static struct dentry *f2fs_lookup(struct inode *dir, struct dentry *dentry,
 		f2fs_msg(inode->i_sb, KERN_WARNING,
 			 "Inconsistent encryption contexts: %lu/%lu",
 			 dir->i_ino, inode->i_ino);
-		return -EXDEV;
+		err = -EPERM;
 		goto out_iput;
 	}
 out_splice:
