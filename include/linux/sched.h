@@ -149,6 +149,11 @@ extern bool single_task_running(void);
 extern unsigned long nr_iowait(void);
 extern unsigned long nr_iowait_cpu(int cpu);
 extern void get_iowait_load(unsigned long *nr_waiters, unsigned long *load);
+#ifdef CONFIG_SCHED_HMP
+extern int register_hmp_task_migration_notifier(struct notifier_block *nb);
+#define HMP_UP_MIGRATION       0
+#define HMP_DOWN_MIGRATION     1
+#endif
 #ifdef CONFIG_CPU_QUIET
 extern u64 nr_running_integral(unsigned int cpu);
 #endif
@@ -1001,6 +1006,7 @@ extern void wake_up_q(struct wake_q_head *head);
 #define SD_OVERLAP		0x2000	/* sched_domains of this level overlap */
 #define SD_NUMA			0x4000	/* cross-node balancing */
 #define SD_SHARE_CAP_STATES	0x8000  /* Domain members share capacity state */
+#define SD_NO_LOAD_BALANCE	0x10000	/* flag for hmp scheduler */
 
 #ifdef CONFIG_SCHED_SMT
 static inline int cpu_smt_flags(void)
@@ -1228,8 +1234,21 @@ extern void wake_up_if_idle(int cpu);
 #ifdef CONFIG_SCHED_HMP
 struct hmp_domain {
 	struct cpumask cpus;
+	struct cpumask possible_cpus;
 	struct list_head hmp_domains;
 };
+
+extern int set_hmp_boost(int enable);
+extern int set_hmp_semiboost(int enable);
+extern int set_hmp_boostpulse(int duration);
+extern int get_hmp_boost(void);
+extern int get_hmp_semiboost(void);
+extern int set_hmp_up_threshold(int value);
+extern int set_hmp_down_threshold(int value);
+extern int set_active_down_migration(int enable);
+extern int set_hmp_aggressive_up_migration(int enable);
+extern int set_hmp_aggressive_yield(int enable);
+
 #endif /* CONFIG_SCHED_HMP */
 
 #else /* CONFIG_SMP */
@@ -1398,11 +1417,12 @@ struct sched_avg {
 	u32 util_sum, period_contrib;
 	unsigned long load_avg, util_avg;
 	struct util_est			util_est;
-	struct multi_load		ml;
 #ifdef CONFIG_SCHED_HMP
+	u64 hmp_load_sum, hmp_load_avg;
 	u64 hmp_last_up_migration;
 	u64 hmp_last_down_migration;
 #endif
+	struct multi_load		ml;
 };
 
 struct ontime_entity {

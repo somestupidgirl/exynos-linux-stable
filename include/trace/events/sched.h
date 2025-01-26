@@ -1457,9 +1457,16 @@ TRACE_EVENT(sched_task_usage_ratio,
 			__entry->ratio)
 );
 
+#ifdef CONFIG_SCHED_HMP
+
 /*
  * Tracepoint for HMP (CONFIG_SCHED_HMP) task migrations.
  */
+#define HMP_MIGRATE_WAKEUP		0
+#define HMP_MIGRATE_FORCE		1
+#define HMP_MIGRATE_OFFLOAD		2
+#define HMP_MIGRATE_IDLE_PULL	3
+
 TRACE_EVENT(sched_hmp_migrate,
 
 	TP_PROTO(struct task_struct *tsk, int dest, int force),
@@ -1469,14 +1476,14 @@ TRACE_EVENT(sched_hmp_migrate,
 	TP_STRUCT__entry(
 		__array(char, comm, TASK_COMM_LEN)
 		__field(pid_t, pid)
-		__field(int, dest)
-		__field(int, force)
+		__field(int,  dest)
+		__field(int,  force)
 	),
 
 	TP_fast_assign(
 		memcpy(__entry->comm, tsk->comm, TASK_COMM_LEN);
-		__entry->pid = tsk->pid;
-		__entry->dest = dest;
+		__entry->pid   = tsk->pid;
+		__entry->dest  = dest;
 		__entry->force = force;
 	),
 
@@ -1484,6 +1491,77 @@ TRACE_EVENT(sched_hmp_migrate,
 		__entry->comm, __entry->pid,
 		__entry->dest, __entry->force)
 );
+
+TRACE_EVENT(sched_hmp_migrate_compensation,
+
+	TP_PROTO(struct task_struct *tsk, int dest, int force, int load),
+
+	TP_ARGS(tsk, dest, force, load),
+
+	TP_STRUCT__entry(
+		__array(char, comm, TASK_COMM_LEN)
+		__field(pid_t, pid)
+		__field(int,  dest)
+		__field(int,  force)
+		__field(int,  load)
+	),
+
+	TP_fast_assign(
+		memcpy(__entry->comm, tsk->comm, TASK_COMM_LEN);
+		__entry->pid   = tsk->pid;
+		__entry->dest  = dest;
+		__entry->force = force;
+		__entry->load = load;
+	),
+
+	TP_printk("comm=%s pid=%d dest=%d force=%d, load=%d",
+		__entry->comm, __entry->pid,
+		__entry->dest, __entry->force, __entry->load)
+);
+
+TRACE_EVENT(sched_hmp_offload_abort,
+
+	TP_PROTO(int cpu, int data, char *label),
+
+	TP_ARGS(cpu,data,label),
+
+	TP_STRUCT__entry(
+		__array(char, label, 64)
+		__field(int, cpu)
+		__field(int, data)
+	),
+
+	TP_fast_assign(
+		strncpy(__entry->label, label, 64);
+		__entry->cpu   = cpu;
+		__entry->data = data;
+	),
+	TP_printk("cpu=%d data=%d label=%s",
+		__entry->cpu, __entry->data,
+		__entry->label)
+);
+TRACE_EVENT(sched_hmp_offload_succeed,
+
+	TP_PROTO(int cpu, int dest_cpu),
+
+	TP_ARGS(cpu,dest_cpu),
+
+	TP_STRUCT__entry(
+		__field(int, cpu)
+		__field(int, dest_cpu)
+	),
+
+	TP_fast_assign(
+		__entry->cpu   = cpu;
+		__entry->dest_cpu = dest_cpu;
+	),
+
+	TP_printk("cpu=%d dest=%d",
+		__entry->cpu,
+		__entry->dest_cpu)
+);
+#endif /* CONFIG_SCHED_HMP */
+
 #endif /* _TRACE_SCHED_H */
 
 /* This part must be outside protection */
