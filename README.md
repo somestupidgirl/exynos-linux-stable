@@ -17,10 +17,11 @@ To compile a single kernel for a specific device, run:
     $ ./build<DEV>.sh <SYS> <KSU> <DTS>
 
 Available arguments:
-    * Device   DEV  N9, S9, S9+
-    * System   SYS  stock, aosp
-    * KernelSU KSU  ksu, noksu
-    * Dts FS   DTS  ext4, erofs
+
+    * DEV: N9, S9, S9+
+    * SYS: stock, aosp
+    * KSU: ksu, noksu
+    * DTS: ext4, erofs
 
 The compiler used is Clang version 19.0.1, from [android.googlesource.com](https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+/refs/tags/android-15.0.0_r12/clang-r536225/)
 
