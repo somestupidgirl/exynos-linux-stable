@@ -1399,6 +1399,10 @@ struct sched_avg {
 	unsigned long load_avg, util_avg;
 	struct util_est			util_est;
 	struct multi_load		ml;
+#ifdef CONFIG_SCHED_HMP
+	u64 hmp_last_up_migration;
+	u64 hmp_last_down_migration;
+#endif
 };
 
 struct ontime_entity {
