@@ -1,4 +1,4 @@
-Android kernel (Linux 4.9.y) for Samsung Exynos 9810 devices
+**Android kernel (Linux 4.9.y) for Samsung Exynos 9810 devices**
 
 Supported devices:
 
