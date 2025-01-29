@@ -12,21 +12,13 @@
 #define POLY1305_KEY_SIZE	32
 #define POLY1305_DIGEST_SIZE	16
 
-struct poly1305_key {
-	u32 r[5];	/* key, base 2^26 */
-};
-
-struct poly1305_state {
-	u32 h[5];	/* accumulator, base 2^26 */
-};
-
 struct poly1305_desc_ctx {
 	/* key */
-	struct poly1305_key r;
+	u32 r[5];
 	/* finalize key */
 	u32 s[4];
 	/* accumulator */
-	struct poly1305_state h;
+	u32 h[5];
 	/* partial buffer */
 	u8 buf[POLY1305_BLOCK_SIZE];
 	/* bytes used in partial buffer */
