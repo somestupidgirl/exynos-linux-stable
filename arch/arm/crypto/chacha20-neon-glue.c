@@ -1,5 +1,5 @@
 /*
- * ChaCha20 (RFC7539) and XChaCha20 stream ciphers, NEON accelerated
+ * ChaCha20 256-bit cipher algorithm, RFC7539, ARM NEON functions
  *
  * Copyright (C) 2016 Linaro, Ltd. <ard.biesheuvel@linaro.org>
  *
@@ -30,7 +30,6 @@
 
 asmlinkage void chacha20_block_xor_neon(u32 *state, u8 *dst, const u8 *src);
 asmlinkage void chacha20_4block_xor_neon(u32 *state, u8 *dst, const u8 *src);
-asmlinkage void hchacha20_block_neon(const u32 *state, u32 *out);
 
 static void chacha20_dosimd(u32 *state, u8 *dst, const u8 *src,
 			    unsigned int bytes)
@@ -58,20 +57,20 @@ static void chacha20_dosimd(u32 *state, u8 *dst, const u8 *src,
 	}
 }
 
-static int chacha20_neon_stream_xor(struct blkcipher_desc *desc,
-				    struct scatterlist *dst,
-				    struct scatterlist *src,
-				    unsigned int nbytes,
-				    struct chacha_ctx *ctx, u8 *iv)
+static int chacha20_simd(struct blkcipher_desc *desc, struct scatterlist *dst,
+			 struct scatterlist *src, unsigned int nbytes)
 {
 	struct blkcipher_walk walk;
 	u32 state[16];
 	int err;
 
+	if (nbytes <= CHACHA_BLOCK_SIZE || !may_use_simd())
+		return crypto_chacha_crypt(desc, dst, src, nbytes);
+
 	blkcipher_walk_init(&walk, dst, src, nbytes);
 	err = blkcipher_walk_virt_block(desc, &walk, CHACHA_BLOCK_SIZE);
 
-	crypto_chacha_init(state, ctx, iv);
+	crypto_chacha_init(state, crypto_blkcipher_ctx(desc->tfm), walk.iv);
 
 	while (walk.nbytes >= CHACHA_BLOCK_SIZE) {
 		kernel_neon_begin();
@@ -89,87 +88,29 @@ static int chacha20_neon_stream_xor(struct blkcipher_desc *desc,
 		kernel_neon_end();
 		err = blkcipher_walk_done(desc, &walk, 0);
 	}
+
 	return err;
 }
 
-static int chacha20_neon(struct blkcipher_desc *desc, struct scatterlist *dst,
-			 struct scatterlist *src, unsigned int nbytes)
-{
-	struct chacha_ctx *ctx = crypto_blkcipher_ctx(desc->tfm);
-	u8 *iv = desc->info;
-
-	if (nbytes <= CHACHA_BLOCK_SIZE || !may_use_simd())
-		return crypto_chacha_crypt(desc, dst, src, nbytes);
-
-	return chacha20_neon_stream_xor(desc, dst, src, nbytes, ctx, iv);
-}
-
-static int xchacha20_neon(struct blkcipher_desc *desc, struct scatterlist *dst,
-			  struct scatterlist *src, unsigned int nbytes)
-{
-	struct chacha_ctx *ctx = crypto_blkcipher_ctx(desc->tfm);
-	u8 *iv = desc->info;
-	struct chacha_ctx subctx;
-	u32 state[16];
-	u8 real_iv[16];
-
-	if (nbytes <= CHACHA_BLOCK_SIZE || !may_use_simd())
-		return crypto_xchacha_crypt(desc, dst, src, nbytes);
-
-	crypto_chacha_init(state, ctx, iv);
-
-	kernel_neon_begin();
-	hchacha20_block_neon(state, subctx.key);
-	kernel_neon_end();
-
-	memcpy(&real_iv[0], iv + 24, 8);
-	memcpy(&real_iv[8], iv + 16, 8);
-	return chacha20_neon_stream_xor(desc, dst, src, nbytes, &subctx,
-					real_iv);
-}
-
-static struct crypto_alg algs[] = {
-	{
-		.cra_name		= "chacha20",
-		.cra_driver_name	= "chacha20-neon",
-		.cra_priority		= 300,
-		.cra_flags		= CRYPTO_ALG_TYPE_BLKCIPHER,
-		.cra_blocksize		= 1,
-		.cra_type		= &crypto_blkcipher_type,
-		.cra_ctxsize		= sizeof(struct chacha_ctx),
-		.cra_alignmask		= sizeof(u32) - 1,
-		.cra_module		= THIS_MODULE,
-		.cra_u			= {
-			.blkcipher = {
-				.min_keysize	= CHACHA_KEY_SIZE,
-				.max_keysize	= CHACHA_KEY_SIZE,
-				.ivsize		= CHACHA_IV_SIZE,
-				.geniv		= "seqiv",
-				.setkey		= crypto_chacha20_setkey,
-				.encrypt	= chacha20_neon,
-				.decrypt	= chacha20_neon,
-			},
-		},
-	}, {
-		.cra_name		= "xchacha20",
-		.cra_driver_name	= "xchacha20-neon",
-		.cra_priority		= 300,
-		.cra_flags		= CRYPTO_ALG_TYPE_BLKCIPHER,
-		.cra_blocksize		= 1,
-		.cra_type		= &crypto_blkcipher_type,
-		.cra_ctxsize		= sizeof(struct chacha_ctx),
-		.cra_alignmask		= sizeof(u32) - 1,
-		.cra_module		= THIS_MODULE,
-		.cra_u			= {
-			.blkcipher = {
-				.min_keysize	= CHACHA_KEY_SIZE,
-				.max_keysize	= CHACHA_KEY_SIZE,
-				.ivsize		= XCHACHA_IV_SIZE,
-				.geniv		= "seqiv",
-				.setkey		= crypto_chacha20_setkey,
-				.encrypt	= xchacha20_neon,
-				.decrypt	= xchacha20_neon,
-			},
+static struct crypto_alg alg = {
+	.cra_name		= "chacha20",
+	.cra_driver_name	= "chacha20-neon",
+	.cra_priority		= 300,
+	.cra_flags		= CRYPTO_ALG_TYPE_BLKCIPHER,
+	.cra_blocksize		= 1,
+	.cra_type		= &crypto_blkcipher_type,
+	.cra_ctxsize		= sizeof(struct chacha_ctx),
+	.cra_alignmask		= sizeof(u32) - 1,
+	.cra_module		= THIS_MODULE,
+	.cra_u			= {
+		.blkcipher = {
+			.min_keysize	= CHACHA_KEY_SIZE,
+			.max_keysize	= CHACHA_KEY_SIZE,
+			.ivsize		= CHACHA_IV_SIZE,
+			.geniv		= "seqiv",
+			.setkey		= crypto_chacha20_setkey,
+			.encrypt	= chacha20_simd,
+			.decrypt	= chacha20_simd,
 		},
 	},
 };
@@ -179,12 +120,12 @@ static int __init chacha20_simd_mod_init(void)
 	if (!(elf_hwcap & HWCAP_NEON))
 		return -ENODEV;
 
-	return crypto_register_algs(algs, ARRAY_SIZE(algs));
+	return crypto_register_alg(&alg);
 }
 
 static void __exit chacha20_simd_mod_fini(void)
 {
-	crypto_unregister_algs(algs, ARRAY_SIZE(algs));
+	crypto_unregister_alg(&alg);
 }
 
 module_init(chacha20_simd_mod_init);
@@ -193,6 +134,3 @@ module_exit(chacha20_simd_mod_fini);
 MODULE_AUTHOR("Ard Biesheuvel <ard.biesheuvel@linaro.org>");
 MODULE_LICENSE("GPL v2");
 MODULE_ALIAS_CRYPTO("chacha20");
-MODULE_ALIAS_CRYPTO("chacha20-neon");
-MODULE_ALIAS_CRYPTO("xchacha20");
-MODULE_ALIAS_CRYPTO("xchacha20-neon");
