@@ -1,6 +1,5 @@
 /*
- * ARM NEON accelerated ChaCha and XChaCha stream ciphers,
- * including ChaCha20 (RFC7539)
+ * ChaCha20 (RFC7539) and XChaCha20 stream ciphers, NEON accelerated
  *
  * Copyright (C) 2016 Linaro, Ltd. <ard.biesheuvel@linaro.org>
  *
@@ -175,27 +174,6 @@ static struct crypto_alg algs[] = {
 				.decrypt	= xchacha_neon,
 			},
 		},
-	}, {
-		.cra_name		= "xchacha12",
-		.cra_driver_name	= "xchacha12-neon",
-		.cra_priority		= 300,
-		.cra_flags		= CRYPTO_ALG_TYPE_BLKCIPHER,
-		.cra_blocksize		= 1,
-		.cra_type		= &crypto_blkcipher_type,
-		.cra_ctxsize		= sizeof(struct chacha_ctx),
-		.cra_alignmask		= sizeof(u32) - 1,
-		.cra_module		= THIS_MODULE,
-		.cra_u			= {
-			.blkcipher = {
-				.min_keysize	= CHACHA_KEY_SIZE,
-				.max_keysize	= CHACHA_KEY_SIZE,
-				.ivsize		= XCHACHA_IV_SIZE,
-				.geniv		= "seqiv",
-				.setkey		= crypto_chacha12_setkey,
-				.encrypt	= xchacha_neon,
-				.decrypt	= xchacha_neon,
-			},
-		},
 	},
 };
 
@@ -222,5 +200,3 @@ MODULE_ALIAS_CRYPTO("chacha20");
 MODULE_ALIAS_CRYPTO("chacha20-neon");
 MODULE_ALIAS_CRYPTO("xchacha20");
 MODULE_ALIAS_CRYPTO("xchacha20-neon");
-MODULE_ALIAS_CRYPTO("xchacha12");
-MODULE_ALIAS_CRYPTO("xchacha12-neon");
