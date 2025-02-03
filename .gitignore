@@ -145,3 +145,8 @@ kernel/configs/android-*.cfg
 
 # KSU
 drivers/kernelsu
+
+# Output files
+android/boot/split/extra
+android/boot/split/kernel
+android/boot/split/ramdisk.cpio
