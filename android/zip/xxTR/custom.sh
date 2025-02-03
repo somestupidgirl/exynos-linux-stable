@@ -6,6 +6,7 @@ cp -n /tmp/aroma/bigcpumax.prop /tmp/kernel/
 cp -n /tmp/aroma/bigcpumin.prop /tmp/kernel/
 cp -n /tmp/aroma/littlecpumax.prop /tmp/kernel/
 cp -n /tmp/aroma/littlecpumin.prop /tmp/kernel/
+
 HOTPLUG=$(cat /tmp/kernel/hotplug.prop | cut -d '=' -f2)
 BIGCPUMAX=$(cat /tmp/kernel/bigcpumax.prop | cut -d '=' -f2)
 BIGCPUMIN=$(cat /tmp/kernel/bigcpumin.prop | cut -d '=' -f2)

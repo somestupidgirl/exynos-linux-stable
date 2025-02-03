@@ -16,9 +16,9 @@
 #
 ###
 
-ini_set("rom_name",             "xxTR Kernel");
-ini_set("rom_version",          "xxTR");
-ini_set("rom_author",           "xxmustafacooTR");
+ini_set("rom_name",             "Red Star Kernel");
+ini_set("rom_version",          "RED-xxTR");
+ini_set("rom_author",           "Red");
 ini_set("rom_device",           "Samsung Galaxy S9/S9+/N9");
 ini_set("rom_date",             "Always for Latest");
 

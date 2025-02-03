@@ -1,5 +1,11 @@
 #!/bin/bash
 
+if [ -f ../../variables.sh ];then
+	. ../../variables.sh
+else
+	ZIP_NAME="Aroma_Installer"
+fi
+
 printf "Creating High Compressed Kernel Files\n"
 if [ -f Kernel.tar ]; then rm Kernel.tar; fi
 if [ -f Kernel.tar.zst ]; then rm Kernel.tar.zst; fi
@@ -50,8 +56,8 @@ filesize=$(wc -c "Kernel.tar" | awk '{print $1}')
 zstd --ultra -22 --single-thread -v --zstd=strategy=9 --stream-size=$filesize --size-hint=$filesize Kernel.tar
 if zstd -t "Kernel.tar.zst" ; then
 	printf "Creating Kernel Flasher Zip\n"
-	if [ -f xxmustafacooTR.zip ]; then rm xxmustafacooTR.zip; fi
-	zip -9 -r xxmustafacooTR.zip META-INF Kernel.tar.zst LICENSE README.md modules ramdisk version include include-ksu dts anykernel.sh patch tools zip.sh xxTR
+	if [ -f $ZIP_NAME.zip ]; then rm $ZIP_NAME.zip; fi
+	zip -9 -r $ZIP_NAME.zip META-INF Kernel.tar.zst LICENSE README.md modules ramdisk version include include-ksu dts anykernel.sh patch tools zip.sh xxTR
 	printf "Done!\n"
 else
     printf "Error in zstd archive!\n"

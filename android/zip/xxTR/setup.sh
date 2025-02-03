@@ -1,13 +1,15 @@
 ### Variables and Setup
 
 # begin variables
-zstd=$home/xxTR/zstd
-patch_date=$home/xxTR/patch_date
+zstd=$home/tools/zstd
+patch_date=$home/tools/patch_date
 init_mod=$home/xxTR/init.services.rc
+
 mkdir -p /tmp/kernel
 
 cp -n /tmp/aroma/boot.prop /tmp/kernel/
 cp -n /tmp/aroma/selinux.prop /tmp/kernel/
+
 BOOT=$(cat /tmp/kernel/boot.prop | cut -d '=' -f2)
 SELINUX=$(cat /tmp/kernel/selinux.prop | cut -d '=' -f2)
 # end variables
@@ -31,22 +33,26 @@ mount -o remount,rw /system;
 
 # begin boot extract
 ui_print " ";
+
 # Replace Boot with stock
 if [ $BOOT = 3 ] || [ $BOOT = 4 ]; then
   ui_print "Using Current Boot Image";
 else
   tar xf $home/Kernel.tar empty-boot.img
+
   # Broken for now
   #if [ -f "/system_root/system/build.prop" ]; then
     #date="$(file_getprop /system_root/system/build.prop ro.build.version.security_patch | cut -c1-7)"
   #elif [ -f "/system/build.prop" ]; then
     #date="$(file_getprop /system/build.prop ro.build.version.security_patch | cut -c1-7)"
   #fi
+
   if [[ ! -z $date ]]; then
     ui_print "Patching Clean Boot Image Date to: $date"
 	# Script does validation of date
     $patch_date $date empty-boot.img
   fi
+
   dd if=empty-boot.img of=$block
   ui_print "Clean Boot Image Flashed";
   rm empty-boot.img
