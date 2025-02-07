@@ -2074,6 +2074,7 @@ static void blk_mq_queue_reinit(struct request_queue *q,
 	blk_mq_sysfs_register(q);
 }
 
+#ifndef CONFIG_EXYNOS_HOTPLUG_GOVERNOR
 /*
  * New online cpumask which is going to be set in this hotplug event.
  * Declare this cpumasks as global as cpu-hotplug operation is invoked
@@ -2144,6 +2145,7 @@ static int blk_mq_queue_reinit_prepare(unsigned int cpu)
 	blk_mq_queue_reinit_work();
 	return 0;
 }
+#endif /* CONFIG_EXYNOS_HOTPLUG_GOVERNOR */
 
 static int __blk_mq_alloc_rq_maps(struct blk_mq_tag_set *set)
 {
@@ -2353,6 +2355,7 @@ void blk_mq_update_nr_hw_queues(struct blk_mq_tag_set *set, int nr_hw_queues)
 }
 EXPORT_SYMBOL_GPL(blk_mq_update_nr_hw_queues);
 
+#ifndef CONFIG_EXYNOS_HOTPLUG_GOVERNOR
 void blk_mq_disable_hotplug(void)
 {
 	mutex_lock(&all_q_mutex);
@@ -2362,15 +2365,17 @@ void blk_mq_enable_hotplug(void)
 {
 	mutex_unlock(&all_q_mutex);
 }
+#endif
 
 static int __init blk_mq_init(void)
 {
 	cpuhp_setup_state_multi(CPUHP_BLK_MQ_DEAD, "block/mq:dead", NULL,
 				blk_mq_hctx_notify_dead);
-
+#ifndef CONFIG_EXYNOS_HOTPLUG_GOVERNOR
 	cpuhp_setup_state_nocalls(CPUHP_BLK_MQ_PREPARE, "block/mq:prepare",
 				  blk_mq_queue_reinit_prepare,
 				  blk_mq_queue_reinit_dead);
+#endif
 	return 0;
 }
 subsys_initcall(blk_mq_init);
