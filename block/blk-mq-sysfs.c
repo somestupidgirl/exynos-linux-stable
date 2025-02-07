@@ -404,6 +404,10 @@ static void __blk_mq_unregister_dev(struct device *dev, struct request_queue *q)
 	struct blk_mq_ctx *ctx;
 	int i, j;
 
+#ifdef CONFIG_EXYNOS_HOTPLUG_GOVERNOR
+	lockdep_assert_held(&q->sysfs_lock);
+#endif
+
 	queue_for_each_hw_ctx(q, hctx, i) {
 		blk_mq_unregister_hctx(hctx);
 
@@ -424,9 +428,17 @@ static void __blk_mq_unregister_dev(struct device *dev, struct request_queue *q)
 
 void blk_mq_unregister_dev(struct device *dev, struct request_queue *q)
 {
+#ifdef CONFIG_EXYNOS_HOTPLUG_GOVERNOR
+	mutex_lock(&q->sysfs_lock);
+#else
 	blk_mq_disable_hotplug();
+#endif
 	__blk_mq_unregister_dev(dev, q);
+#ifdef CONFIG_EXYNOS_HOTPLUG_GOVERNOR
+	mutex_unlock(&q->sysfs_lock);
+#else
 	blk_mq_enable_hotplug();
+#endif
 }
 
 void blk_mq_hctx_kobj_init(struct blk_mq_hw_ctx *hctx)
@@ -446,13 +458,21 @@ void blk_mq_sysfs_init(struct request_queue *q)
 		kobject_init(&ctx->kobj, &blk_mq_ctx_ktype);
 	}
 }
-
+#ifdef CONFIG_EXYNOS_HOTPLUG_GOVERNOR
+int __blk_mq_register_dev(struct device *dev, struct request_queue *q)
+#else
 int blk_mq_register_dev(struct device *dev, struct request_queue *q)
+#endif
 {
 	struct blk_mq_hw_ctx *hctx;
 	int ret, i;
 
+#ifdef CONFIG_EXYNOS_HOTPLUG_GOVERNOR
+	WARN_ON_ONCE(!q->kobj.parent);
+	lockdep_assert_held(&q->sysfs_lock);
+#else
 	blk_mq_disable_hotplug();
+#endif
 
 	ret = kobject_add(&q->mq_kobj, kobject_get(&dev->kobj), "%s", "mq");
 	if (ret < 0)
@@ -471,22 +491,48 @@ int blk_mq_register_dev(struct device *dev, struct request_queue *q)
 	else
 		q->mq_sysfs_init_done = true;
 out:
+#ifndef CONFIG_EXYNOS_HOTPLUG_GOVERNOR
 	blk_mq_enable_hotplug();
+#endif
 
 	return ret;
 }
 EXPORT_SYMBOL_GPL(blk_mq_register_dev);
+
+#ifdef CONFIG_EXYNOS_HOTPLUG_GOVERNOR
+int blk_mq_register_dev(struct device *dev, struct request_queue *q)
+{
+	int ret;
+
+	mutex_lock(&q->sysfs_lock);
+	ret = __blk_mq_register_dev(dev, q);
+	mutex_unlock(&q->sysfs_lock);
+
+	return ret;
+}
+#endif
 
 void blk_mq_sysfs_unregister(struct request_queue *q)
 {
 	struct blk_mq_hw_ctx *hctx;
 	int i;
 
+#ifdef CONFIG_EXYNOS_HOTPLUG_GOVERNOR
+	mutex_lock(&q->sysfs_lock);
+#endif
 	if (!q->mq_sysfs_init_done)
+#ifdef CONFIG_EXYNOS_HOTPLUG_GOVERNOR
+		goto unlock;
+#endif
 		return;
 
 	queue_for_each_hw_ctx(q, hctx, i)
 		blk_mq_unregister_hctx(hctx);
+
+#ifdef CONFIG_EXYNOS_HOTPLUG_GOVERNOR
+unlock:
+	mutex_unlock(&q->sysfs_lock);
+#endif
 }
 
 int blk_mq_sysfs_register(struct request_queue *q)
@@ -494,8 +540,15 @@ int blk_mq_sysfs_register(struct request_queue *q)
 	struct blk_mq_hw_ctx *hctx;
 	int i, ret = 0;
 
+#ifdef CONFIG_EXYNOS_HOTPLUG_GOVERNOR
+	mutex_lock(&q->sysfs_lock);
+#endif
 	if (!q->mq_sysfs_init_done)
+#ifdef CONFIG_EXYNOS_HOTPLUG_GOVERNOR
+		goto unlock;
+#else
 		return ret;
+#endif
 
 	queue_for_each_hw_ctx(q, hctx, i) {
 		ret = blk_mq_register_hctx(hctx);
@@ -503,5 +556,11 @@ int blk_mq_sysfs_register(struct request_queue *q)
 			break;
 	}
 
+#ifdef CONFIG_EXYNOS_HOTPLUG_GOVERNOR
+unlock:
+	mutex_unlock(&q->sysfs_lock);
 	return ret;
+#else
+	return ret;
+#endif
 }
