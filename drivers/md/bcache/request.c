@@ -668,7 +668,7 @@ static inline struct search *search_alloc(struct bio *bio,
 	s->iop.write_prio	= 0;
 	s->iop.error		= 0;
 	s->iop.flags		= 0;
-	s->iop.flush_journal	= (bio->bi_opf & (REQ_PREFLUSH|REQ_FUA)) != 0;
+	s->iop.flush_journal	= op_is_flush(bio->bi_opf);
 	s->iop.wq		= bcache_wq;
 
 	return s;
@@ -932,7 +932,7 @@ static void cached_dev_write(struct cached_dev *dc, struct search *s)
 			flush->bi_bdev	= bio->bi_bdev;
 			flush->bi_end_io = request_endio;
 			flush->bi_private = cl;
-			bio_set_op_attrs(flush, REQ_OP_WRITE, WRITE_FLUSH);
+			flush->bi_opf = REQ_OP_WRITE | REQ_PREFLUSH;
 
 			closure_bio_submit(flush, cl);
 		}

@@ -141,6 +141,7 @@ struct nvme_queue {
  * allocated to store the PRP list.
  */
 struct nvme_iod {
+	struct nvme_request req;
 	struct nvme_queue *nvmeq;
 	int aborted;
 	int npages;		/* In the PRP list. 0 means small pool in use */
@@ -302,14 +303,14 @@ static void __nvme_submit_cmd(struct nvme_queue *nvmeq,
 static __le64 **iod_list(struct request *req)
 {
 	struct nvme_iod *iod = blk_mq_rq_to_pdu(req);
-	return (__le64 **)(iod->sg + req->nr_phys_segments);
+	return (__le64 **)(iod->sg + blk_rq_nr_phys_segments(req));
 }
 
 static int nvme_init_iod(struct request *rq, unsigned size,
 		struct nvme_dev *dev)
 {
 	struct nvme_iod *iod = blk_mq_rq_to_pdu(rq);
-	int nseg = rq->nr_phys_segments;
+	int nseg = blk_rq_nr_phys_segments(rq);
 
 	if (nseg > NVME_INT_PAGES || size > NVME_INT_BYTES(dev)) {
 		iod->sg = kmalloc(nvme_iod_alloc_size(dev, size, nseg), GFP_ATOMIC);
@@ -324,9 +325,9 @@ static int nvme_init_iod(struct request *rq, unsigned size,
 	iod->nents = 0;
 	iod->length = size;
 
-	if (!(rq->cmd_flags & REQ_DONTPREP)) {
+	if (!(rq->rq_flags & RQF_DONTPREP)) {
 		rq->retries = 0;
-		rq->cmd_flags |= REQ_DONTPREP;
+		rq->rq_flags |= RQF_DONTPREP;
 	}
 	return 0;
 }
@@ -338,8 +339,6 @@ static void nvme_free_iod(struct nvme_dev *dev, struct request *req)
 	int i;
 	__le64 **list = iod_list(req);
 	dma_addr_t prp_dma = iod->first_dma;
-
-	nvme_cleanup_cmd(req);
 
 	if (iod->npages == 0)
 		dma_pool_free(dev->prp_small_pool, list[0], prp_dma);
@@ -510,7 +509,7 @@ static int nvme_map_data(struct nvme_dev *dev, struct request *req,
 			DMA_TO_DEVICE : DMA_FROM_DEVICE;
 	int ret = BLK_MQ_RQ_QUEUE_ERROR;
 
-	sg_init_table(iod->sg, req->nr_phys_segments);
+	sg_init_table(iod->sg, blk_rq_nr_phys_segments(req));
 	iod->nents = blk_rq_map_sg(q, req, iod->sg);
 	if (!iod->nents)
 		goto out;
@@ -566,6 +565,7 @@ static void nvme_unmap_data(struct nvme_dev *dev, struct request *req)
 		}
 	}
 
+	nvme_cleanup_cmd(req);
 	nvme_free_iod(dev, req);
 }
 
@@ -590,28 +590,27 @@ static int nvme_queue_rq(struct blk_mq_hw_ctx *hctx,
 	 */
 	if (ns && ns->ms && !blk_integrity_rq(req)) {
 		if (!(ns->pi_type && ns->ms == 8) &&
-					req->cmd_type != REQ_TYPE_DRV_PRIV) {
+		    !blk_rq_is_passthrough(req)) {
 			blk_mq_end_request(req, -EFAULT);
 			return BLK_MQ_RQ_QUEUE_OK;
 		}
 	}
 
-	map_len = nvme_map_len(req);
-	ret = nvme_init_iod(req, map_len, dev);
-	if (ret)
+	ret = nvme_setup_cmd(ns, req, &cmnd);
+	if (ret != BLK_MQ_RQ_QUEUE_OK)
 		return ret;
 
-	ret = nvme_setup_cmd(ns, req, &cmnd);
-	if (ret)
-		goto out;
+	map_len = nvme_map_len(req);
+	ret = nvme_init_iod(req, map_len, dev);
+	if (ret != BLK_MQ_RQ_QUEUE_OK)
+		goto out_free_cmd;
 
-	if (req->nr_phys_segments)
+	if (blk_rq_nr_phys_segments(req))
 		ret = nvme_map_data(dev, req, map_len, &cmnd);
 
-	if (ret)
-		goto out;
+	if (ret != BLK_MQ_RQ_QUEUE_OK)
+		goto out_cleanup_iod;
 
-	cmnd.common.command_id = req->tag;
 	blk_mq_start_request(req);
 
 	spin_lock_irq(&nvmeq->q_lock);
@@ -621,14 +620,16 @@ static int nvme_queue_rq(struct blk_mq_hw_ctx *hctx,
 		else
 			ret = BLK_MQ_RQ_QUEUE_ERROR;
 		spin_unlock_irq(&nvmeq->q_lock);
-		goto out;
+		goto out_cleanup_iod;
 	}
 	__nvme_submit_cmd(nvmeq, &cmnd);
 	nvme_process_cq(nvmeq);
 	spin_unlock_irq(&nvmeq->q_lock);
 	return BLK_MQ_RQ_QUEUE_OK;
-out:
+out_cleanup_iod:
 	nvme_free_iod(dev, req);
+out_free_cmd:
+	nvme_cleanup_cmd(req);
 	return ret;
 }
 
@@ -647,7 +648,7 @@ static void nvme_complete_rq(struct request *req)
 			return;
 		}
 
-		if (req->cmd_type == REQ_TYPE_DRV_PRIV)
+		if (blk_rq_is_passthrough(req))
 			error = req->errors;
 		else
 			error = nvme_error_status(req->errors);
@@ -708,8 +709,7 @@ static void __nvme_process_cq(struct nvme_queue *nvmeq, unsigned int *tag)
 		}
 
 		req = blk_mq_tag_to_rq(*nvmeq->tags, cqe.command_id);
-		if (req->cmd_type == REQ_TYPE_DRV_PRIV && req->special)
-			memcpy(req->special, &cqe, sizeof(cqe));
+		nvme_req(req)->result = cqe.result;
 		blk_mq_complete_request(req, le16_to_cpu(cqe.status) >> 1);
 
 	}
@@ -1195,6 +1195,7 @@ static int nvme_alloc_admin_tags(struct nvme_dev *dev)
 		dev->admin_tagset.timeout = ADMIN_TIMEOUT;
 		dev->admin_tagset.numa_node = dev_to_node(dev->dev);
 		dev->admin_tagset.cmd_size = nvme_cmd_size(dev);
+		dev->admin_tagset.flags = BLK_MQ_F_NO_SCHED;
 		dev->admin_tagset.driver_data = dev;
 
 		if (blk_mq_alloc_tag_set(&dev->admin_tagset))

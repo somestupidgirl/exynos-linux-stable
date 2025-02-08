@@ -829,13 +829,13 @@ static void throtl_charge_bio(struct throtl_grp *tg, struct bio *bio)
 	tg->io_disp[rw]++;
 
 	/*
-	 * REQ_THROTTLED is used to prevent the same bio to be throttled
+	 * BIO_THROTTLED is used to prevent the same bio to be throttled
 	 * more than once as a throttled bio will go through blk-throtl the
 	 * second time when it eventually gets issued.  Set it when a bio
 	 * is being charged to a tg.
 	 */
-	if (!(bio->bi_opf & REQ_THROTTLED))
-		bio->bi_opf |= REQ_THROTTLED;
+	if (!bio_flagged(bio, BIO_THROTTLED))
+		bio_set_flag(bio, BIO_THROTTLED);
 }
 
 /**
@@ -877,10 +877,12 @@ static void tg_update_disptime(struct throtl_grp *tg)
 	unsigned long read_wait = -1, write_wait = -1, min_wait = -1, disptime;
 	struct bio *bio;
 
-	if ((bio = throtl_peek_queued(&sq->queued[READ])))
+	bio = throtl_peek_queued(&sq->queued[READ]);
+	if (bio)
 		tg_may_dispatch(tg, bio, &read_wait);
 
-	if ((bio = throtl_peek_queued(&sq->queued[WRITE])))
+	bio = throtl_peek_queued(&sq->queued[WRITE]);
+	if (bio)
 		tg_may_dispatch(tg, bio, &write_wait);
 
 	min_wait = min(read_wait, write_wait);
@@ -1412,7 +1414,7 @@ bool blk_throtl_bio(struct request_queue *q, struct blkcg_gq *blkg,
 	WARN_ON_ONCE(!rcu_read_lock_held());
 
 	/* see throtl_charge_bio() */
-	if ((bio->bi_opf & REQ_THROTTLED) || !tg->has_rules[rw])
+	if (bio_flagged(bio, BIO_THROTTLED) || !tg->has_rules[rw])
 		goto out;
 
 	spin_lock_irq(q->queue_lock);
@@ -1491,7 +1493,7 @@ out:
 	 * being issued.
 	 */
 	if (!throttled)
-		bio->bi_opf &= ~REQ_THROTTLED;
+		bio_clear_flag(bio, BIO_THROTTLED);
 	return throttled;
 }
 

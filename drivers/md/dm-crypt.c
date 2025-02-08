@@ -1276,7 +1276,7 @@ static void clone_init(struct dm_crypt_io *io, struct bio *clone)
 	clone->bi_private = io;
 	clone->bi_end_io  = crypt_endio;
 	clone->bi_bdev    = cc->dev->bdev;
-	bio_set_op_attrs(clone, bio_op(io->base_bio), bio_flags(io->base_bio));
+	clone->bi_opf	  = io->base_bio->bi_opf;
 #ifdef CONFIG_JOURNAL_DATA_TAG
 	clone->bi_flags   |= io->base_bio->bi_flags & (1 << BIO_JOURNAL);
 #endif
