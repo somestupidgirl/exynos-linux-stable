@@ -2087,7 +2087,7 @@ static int ufshcd_queuecommand(struct Scsi_Host *host, struct scsi_cmnd *cmd)
 	/* IO svc time latency histogram */
 	if (hba != NULL && cmd->request != NULL) {
 		if (hba->latency_hist_enabled &&
-		    (cmd->request->cmd_type == REQ_TYPE_FS)) {
+		    (req_op(cmd->request) == REQ_OP_WRITE)) {
 			cmd->request->lat_hist_io_start = ktime_get();
 			cmd->request->lat_hist_enabled = 1;
 		} else
