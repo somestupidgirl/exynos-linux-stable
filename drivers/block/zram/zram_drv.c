@@ -592,7 +592,7 @@ static void reset_bdev(struct zram *zram)
 	zram->old_block_size = 0;
 	zram->bdev = NULL;
 	
-	zram->disk->queue->backing_dev_info.capabilities |=	
+	zram->disk->queue->backing_dev_info->capabilities |=	
 				BDI_CAP_SYNCHRONOUS_IO;
 	kvfree(zram->bitmap);
 	zram->bitmap = NULL;
@@ -720,7 +720,7 @@ static ssize_t backing_dev_store(struct device *dev,
 	 * freely but in fact, IO is going on so finally could cause	
 	 * use-after-free when the IO is really done.	
 	 */	
-	zram->disk->queue->backing_dev_info.capabilities &=	
+	zram->disk->queue->backing_dev_info->capabilities &=	
 			~BDI_CAP_SYNCHRONOUS_IO;
 	up_write(&zram->init_lock);
 
@@ -3316,7 +3316,7 @@ static int zram_add(void)
 		zram->disk->queue->limits.discard_zeroes_data = 0;
 	queue_flag_set_unlocked(QUEUE_FLAG_DISCARD, zram->disk->queue);
 
-	zram->disk->queue->backing_dev_info.capabilities |=
+	zram->disk->queue->backing_dev_info->capabilities |=
 					(BDI_CAP_STABLE_WRITES | BDI_CAP_SYNCHRONOUS_IO);
 
 	disk_to_dev(zram->disk)->groups = zram_disk_attr_groups;
