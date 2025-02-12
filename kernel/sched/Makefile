@@ -28,6 +28,7 @@ obj-$(CONFIG_CGROUP_CPUACCT) += cpuacct.o
 obj-$(CONFIG_CPU_FREQ) += cpufreq.o
 obj-$(CONFIG_CPU_FREQ_GOV_ENERGY_DCFC) += cpufreq_energy_dcfc.o
 obj-$(CONFIG_CPU_FREQ_GOV_HELIX_SCHEDUTIL) += cpufreq_helix_schedutil.o
+obj-$(CONFIG_CPU_FREQ_GOV_PWRUTILX) += cpufreq_pwrutilx.o
 obj-$(CONFIG_CPU_FREQ_GOV_SCHEDUTIL) += cpufreq_schedutil.o
 obj-$(CONFIG_CPU_FREQ_GOV_SCHEDUTILX) += cpufreq_schedutilX.o
 obj-$(CONFIG_PSI) += psi.o
