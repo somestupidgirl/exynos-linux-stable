@@ -35,5 +35,6 @@ obj-$(CONFIG_CPU_FREQ_GOV_PWRUTILX) += cpufreq_pwrutilx.o
 obj-$(CONFIG_CPU_FREQ_GOV_SCHEDUTIL) += cpufreq_schedutil.o
 obj-$(CONFIG_CPU_FREQ_GOV_SCHEDUTILX) += cpufreq_schedutilX.o
 obj-$(CONFIG_CPU_FREQ_GOV_SMURFUTIL) += cpufreq_smurfutil.o
+obj-$(CONFIG_CPU_FREQ_GOV_SMURFUTIL_FLEX) += cpufreq_smurfutil_flex.o
 obj-$(CONFIG_PSI) += psi.o
 obj-$(CONFIG_SCHED_EMS) += ems/
