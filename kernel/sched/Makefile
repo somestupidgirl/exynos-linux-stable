@@ -31,6 +31,7 @@ obj-$(CONFIG_CPU_FREQ_GOV_DARKNESSSCHED) += cpufreq_darknesssched.o
 obj-$(CONFIG_CPU_FREQ_GOV_ELECTROUTIL) += cpufreq_electroutil.o
 obj-$(CONFIG_CPU_FREQ_GOV_ENERGY_DCFC) += cpufreq_energy_dcfc.o
 obj-$(CONFIG_CPU_FREQ_GOV_HELIX_SCHEDUTIL) += cpufreq_helix_schedutil.o
+obj-$(CONFIG_CPU_FREQ_GOV_PIXEL_SMURFUTIL) += cpufreq_pixel_smurfutil.o
 obj-$(CONFIG_CPU_FREQ_GOV_PWRUTILX) += cpufreq_pwrutilx.o
 obj-$(CONFIG_CPU_FREQ_GOV_SCHEDUTIL) += cpufreq_schedutil.o
 obj-$(CONFIG_CPU_FREQ_GOV_SCHEDUTILX) += cpufreq_schedutilX.o
