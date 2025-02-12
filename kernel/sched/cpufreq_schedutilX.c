@@ -16,12 +16,12 @@
 #include <linux/slab.h>
 #include <linux/cpu_pm.h>
 #include <linux/of.h>
+#include <linux/ems.h>
 #include <trace/events/power.h>
 
 #include "sched.h"
 #include "tune.h"
-
-unsigned long boosted_cpu_util(int cpu);
+#include "ems/ems.h"
 
 /* Stub out fast switch routines present on mainline to reduce the backport
  * overhead. */
@@ -234,7 +234,11 @@ static void sugov_get_util(unsigned long *util, unsigned long *max, u64 time)
 	rt = div64_u64(rq->rt_avg, sched_avg_period() + delta);
 	rt = (rt * max_cap) >> SCHED_CAPACITY_SHIFT;
 
-	*util = boosted_cpu_util(cpu);
+#ifdef CONFIG_SCHED_EMS
+	*util = ml_boosted_cpu_util(cpu) + rt;
+#else
+	*util = boosted_cpu_util(cpu, rt);
+#endif
 	
 	if (sched_feat(UTIL_EST)) {
 		*util = max_t(unsigned long, *util,
@@ -245,6 +249,10 @@ static void sugov_get_util(unsigned long *util, unsigned long *max, u64 time)
 		*util = min((*util + rt), max_cap);
 
 	*max = max_cap;
+
+#ifdef CONFIG_SCHED_EMS
+	part_cpu_active_ratio(util, max, cpu);
+#endif
 }
 
 static void sugov_set_iowait_boost(struct sugov_cpu *sg_cpu, u64 time,
