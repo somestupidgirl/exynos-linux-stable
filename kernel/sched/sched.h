@@ -1777,6 +1777,15 @@ static inline int hrtick_enabled(struct rq *rq)
 
 #endif /* CONFIG_SCHED_HRTICK */
 
+#ifdef CONFIG_SCHED_WALT
+u64 sched_ktime_clock(void);
+#else
+static inline u64 sched_ktime_clock(void)
+{
+	return sched_clock();
+}
+#endif
+
 #ifdef CONFIG_SMP
 extern void sched_avg_update(struct rq *rq);
 extern unsigned long sched_get_rt_rq_util(int cpu);
@@ -1836,6 +1845,16 @@ extern unsigned int walt_ravg_window;
 extern bool walt_disabled;
 
 extern unsigned long cpu_util(int cpu);
+
+extern unsigned long
+boosted_cpu_util(int cpu, unsigned long other_util);
+
+struct sched_walt_cpu_load {
+	unsigned long prev_window_util;
+	unsigned long nl;
+	unsigned long pl;
+	u64 ws;
+};
 
 #endif /* CONFIG_SMP */
 
@@ -2165,6 +2184,12 @@ static inline u64 irq_time_read(int cpu)
 #endif /* CONFIG_IRQ_TIME_ACCOUNTING */
 
 #ifdef CONFIG_CPU_FREQ
+
+/**
+ * Default limit transition rate.
+ */
+#define	DEFAULT_LATENCY_MULTIPLIER	50
+
 DECLARE_PER_CPU(struct update_util_data *, cpufreq_update_util_data);
 
 /**
