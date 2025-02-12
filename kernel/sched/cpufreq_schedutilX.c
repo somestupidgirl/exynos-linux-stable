@@ -16,12 +16,13 @@
 #include <linux/slab.h>
 #include <linux/cpu_pm.h>
 #include <linux/of.h>
+#include <linux/ems.h>
+
 #include <trace/events/power.h>
 
 #include "sched.h"
 #include "tune.h"
-
-unsigned long boosted_cpu_util(int cpu);
+#include "ems/ems.h"
 
 /* Stub out fast switch routines present on mainline to reduce the backport
  * overhead. */
@@ -170,6 +171,15 @@ static void sugov_update_commit(struct sugov_policy *sg_policy, u64 time,
 	}
 }
 
+#ifdef CONFIG_FREQVAR_TUNE
+unsigned long freqvar_boost_vector(int cpu, unsigned long util);
+#else
+static inline unsigned long freqvar_boost_vector(int cpu, unsigned long util)
+{
+	return util;
+}
+#endif
+
 /**
  * get_next_freq - Compute a new frequency for a given cpufreq policy.
  * @sg_policy: schedutilX policy object to compute the new frequency for.
@@ -234,17 +244,21 @@ static void sugov_get_util(unsigned long *util, unsigned long *max, u64 time)
 	rt = div64_u64(rq->rt_avg, sched_avg_period() + delta);
 	rt = (rt * max_cap) >> SCHED_CAPACITY_SHIFT;
 
-	*util = boosted_cpu_util(cpu);
-	
-	if (sched_feat(UTIL_EST)) {
-		*util = max_t(unsigned long, *util,
-			     READ_ONCE(cpu_rq(cpu)->cfs.avg.util_est.enqueued));
-	}
-	
-	if (use_pelt())
-		*util = min((*util + rt), max_cap);
+#ifdef CONFIG_SCHED_EMS
+	*util = ml_boosted_cpu_util(cpu) + rt;
+#else
+	*util = boosted_cpu_util(cpu, rt);
+#endif
+	if (likely(use_pelt()))
+		*util = *util + rt;
 
+	*util = freqvar_boost_vector(cpu, *util);
+	*util = min(*util, max_cap);
 	*max = max_cap;
+
+#ifdef CONFIG_SCHED_EMS
+	part_cpu_active_ratio(util, max, cpu);
+#endif
 }
 
 static void sugov_set_iowait_boost(struct sugov_cpu *sg_cpu, u64 time,
