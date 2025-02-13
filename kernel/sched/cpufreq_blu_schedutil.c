@@ -270,6 +270,7 @@ static void sugov_track_cycles(struct sugov_policy *sg_policy,
 				u64 upto)
 {
 	u64 delta_ns, cycles;
+	unsigned int sysctl_sched_use_walt_cpu_util;
 
 	if (unlikely(!sysctl_sched_use_walt_cpu_util))
 		return;
@@ -288,6 +289,8 @@ static void sugov_calc_avg_cap(struct sugov_policy *sg_policy, u64 curr_ws,
 {
 	u64 last_ws = sg_policy->last_ws;
 	unsigned int avg_freq;
+	unsigned int sysctl_sched_use_walt_cpu_util;
+	unsigned int sched_ravg_window;
 
 	if (unlikely(!sysctl_sched_use_walt_cpu_util))
 		return;
@@ -321,6 +324,7 @@ static void sugov_walt_adjust(struct sugov_cpu *sg_cpu, unsigned long *util,
 	unsigned long nl = sg_cpu->walt_load.nl;
 	unsigned long cpu_util = sg_cpu->util;
 	bool is_hiload;
+	unsigned int sysctl_sched_use_walt_cpu_util;
 
 	if (unlikely(!sysctl_sched_use_walt_cpu_util))
 		return;
@@ -898,6 +902,7 @@ static int sugov_init(struct cpufreq_policy *policy)
 	struct sugov_tunables *tunables;
 	unsigned int lat;
 	int ret = 0;
+	unsigned int sched_ravg_window;
 
 	/* State should be equivalent to EXIT */
 	if (policy->governor_data)
