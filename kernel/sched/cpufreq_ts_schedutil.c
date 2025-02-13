@@ -13,7 +13,7 @@
 
 #include <linux/cpufreq.h>
 #include <linux/kthread.h>
-#include <uapi/linux/sched/types.h>
+#include <linux/sched/types.h>
 #include <linux/slab.h>
 #include <linux/cpu_pm.h>
 #include <linux/ems.h>
@@ -663,7 +663,7 @@ static void sugov_irq_work(struct irq_work *irq_work)
 
 /************************ Governor externals ***********************/
 static void update_min_rate_limit_ns(struct sugov_policy *sg_policy);
-void sugov_update_rate_limit_us(struct cpufreq_policy *policy,
+void ts_sugov_update_rate_limit_us(struct cpufreq_policy *policy,
 			int up_rate_limit_ms, int down_rate_limit_ms)
 {
 	struct sugov_policy *sg_policy;
@@ -686,7 +686,7 @@ void sugov_update_rate_limit_us(struct cpufreq_policy *policy,
 	update_min_rate_limit_ns(sg_policy);
 }
 
-int sugov_sysfs_add_attr(struct cpufreq_policy *policy, const struct attribute *attr)
+int ts_sugov_sysfs_add_attr(struct cpufreq_policy *policy, const struct attribute *attr)
 {
 	struct sugov_policy *sg_policy;
 	struct sugov_tunables *tunables;
@@ -702,7 +702,7 @@ int sugov_sysfs_add_attr(struct cpufreq_policy *policy, const struct attribute *
 	return sysfs_create_file(&tunables->attr_set.kobj, attr);
 }
 
-struct cpufreq_policy *sugov_get_attr_policy(struct gov_attr_set *attr_set)
+struct cpufreq_policy *ts_sugov_get_attr_policy(struct gov_attr_set *attr_set)
 {
 	struct sugov_policy *sg_policy = list_first_entry(&attr_set->policy_list,
 						typeof(*sg_policy), tunables_hook);
@@ -1487,7 +1487,7 @@ static void __init sugov_exynos_init(void)
 
 	pm_qos_add_notifier(PM_QOS_CLUSTER0_FREQ_MIN, &sugov_min_qos_notifier);
 	pm_qos_add_notifier(PM_QOS_CLUSTER1_FREQ_MIN, &sugov_min_qos_notifier);
-	pm_qos_add_notifier(PM_QOS_CLUSTER2_FREQ_MIN, &sugov_min_qos_notifier);
+	//pm_qos_add_notifier(PM_QOS_CLUSTER2_FREQ_MIN, &sugov_min_qos_notifier);
 	cpu_pm_register_notifier(&sugov_pm_nb);
 
 	return;
