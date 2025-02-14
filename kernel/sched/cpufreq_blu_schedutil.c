@@ -26,7 +26,14 @@
 #define cpufreq_driver_fast_switch(x, y) 0
 #define cpufreq_enable_fast_switch(x)
 #define cpufreq_disable_fast_switch(x)
+
+#ifdef LATENCY_MULTIPLIER
+#undef LATENCY_MULTIPLIER
 #define LATENCY_MULTIPLIER			(1000)
+#else
+#define LATENCY_MULTIPLIER			(1000)
+#endif
+
 #define SUGOV_KTHREAD_PRIORITY	50
 
 struct sugov_tunables {

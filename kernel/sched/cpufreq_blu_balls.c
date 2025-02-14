@@ -35,13 +35,22 @@
 #define cpufreq_driver_fast_switch(x, y) 0
 #define cpufreq_enable_fast_switch(x)
 #define cpufreq_disable_fast_switch(x)
+
+#ifdef LATENCY_MULTIPLIER
+#undef LATENCY_MULTIPLIER
 #define LATENCY_MULTIPLIER			(1000)
+#else
+#define LATENCY_MULTIPLIER			(1000)
+#endif
+
 #define LATENCY_MULTIPLIER_UP_LC		(500)
 #define LATENCY_MULTIPLIER_UP_BC		(400)
 #define LATENCY_MULTIPLIER_DOWN_LC		(300)
 #define LATENCY_MULTIPLIER_DOWN_BC		(400)
+
 #define DEFAULT_HISPEED_FREQ			858000	// 0
 #define DEFAULT_HISPEED_FREQ_BC			1040000	// 0
+
 #define SUGOV_KTHREAD_PRIORITY			50	// 50
 
 struct sugov_tunables {
@@ -1087,27 +1096,6 @@ static int sugov_limits(struct cpufreq_policy *policy)
 	return 0;
 }
 
-/*
-static int cpufreq_blu_balls_gov_cb(struct cpufreq_policy *policy,
-				unsigned int event)
-{
-	switch(event) {
-	case CPUFREQ_GOV_POLICY_INIT:
-		return sugov_init(policy);
-	case CPUFREQ_GOV_POLICY_EXIT:
-		return sugov_exit(policy);
-	case CPUFREQ_GOV_START:
-		return sugov_start(policy);
-	case CPUFREQ_GOV_STOP:
-		return sugov_stop(policy);
-	case CPUFREQ_GOV_LIMITS:
-		return sugov_limits(policy);
-	default:
-		BUG();
-	}
-}
-*/
-
 static struct cpufreq_governor blu_balls_gov = {
 	.name = "blu_balls",
 	.owner = THIS_MODULE,
@@ -1124,14 +1112,6 @@ struct cpufreq_governor *cpufreq_default_governor(void)
 	return &blu_balls_gov;
 }
 #endif
-
-/*
-static struct cpufreq_governor blu_balls_gov = {
-	.name = "blu_balls",
-	.governor = cpufreq_blu_balls_gov_cb,
-	.owner = THIS_MODULE,
-};
-*/
 
 static int __init sugov_register(void)
 {
