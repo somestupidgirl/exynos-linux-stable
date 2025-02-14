@@ -16,8 +16,8 @@
 #include <linux/sched/types.h>
 #include <linux/slab.h>
 #include <linux/cpu_pm.h>
+#include <linux/of.h>
 #include <linux/ems.h>
-
 #include <trace/events/power.h>
 
 #ifdef CONFIG_BATTERY_SAVER
@@ -44,7 +44,7 @@ unsigned long boosted_cpu_util(int cpu, unsigned long other_util);
 /* KTHREAD PRIOR - default 50 */
 #define SUGOV_KTHREAD_PRIORITY 50
 
-/* UPD/DOWN_RATE_LIMIT_US for each one CPU cluster - little, mid and big - by XDA@nalas*/
+/* UP/DOWN_RATE_LIMIT_US for each one CPU cluster - little, mid and big - by XDA@nalas*/
 #define UP_RATE_LIMIT_US 4000
 #define DOWN_RATE_LIMIT_US 4000
 #define UP_RATE_LIMIT_US_LITTLE 4000
@@ -86,8 +86,8 @@ struct sugov_policy {
 	struct task_struct *thread;
 	bool work_in_progress;
 
-	bool limits_changed;
 	bool need_freq_update;
+	bool limits_changed;
 #ifdef CONFIG_SCHED_KAIR_GLUE
 	bool be_stochastic;
 #endif
@@ -434,6 +434,7 @@ skip_betting:
 
 	if (freq == sg_policy->cached_raw_freq && !sg_policy->need_freq_update)
 		return sg_policy->next_freq;
+
 	sg_policy->need_freq_update = false;
 	sg_policy->cached_raw_freq = freq;
 	freq = cpufreq_driver_resolve_freq(policy, freq);
@@ -464,7 +465,6 @@ static void sugov_get_util(unsigned long *util, unsigned long *max, int cpu)
 #ifdef CONFIG_SCHED_EMS
 	part_cpu_active_ratio(util, max, cpu);
 #endif
-
 }
 
 #ifdef CONFIG_SCHED_KAIR_GLUE
@@ -505,7 +505,7 @@ static void sugov_set_iowait_boost(struct sugov_cpu *sg_cpu, u64 time,
 			sg_cpu->iowait_boost = 0;
 			sg_cpu->iowait_boost_pending = false;
 		}
-    }
+	}
 
 	if (flags & SCHED_CPUFREQ_IOWAIT) {
 		if (sg_cpu->iowait_boost_pending)
@@ -715,6 +715,7 @@ struct cpufreq_policy *ts_sugov_get_attr_policy(struct gov_attr_set *attr_set)
 						typeof(*sg_policy), tunables_hook);
 	return sg_policy->policy;
 }
+
 /************************** sysfs interface ************************/
 
 static struct sugov_tunables *global_tunables;
@@ -1111,7 +1112,7 @@ static void sugov_exit(struct cpufreq_policy *policy)
 	if (!count) {
 		sugov_tunables_save(policy, tunables);
 		sugov_tunables_free(tunables);
-    }
+	}
 
 #ifdef CONFIG_SCHED_KAIR_GLUE
 	if (sg_cpu->util_vessel) {
@@ -1230,6 +1231,7 @@ static void sugov_stop(struct cpufreq_policy *policy)
 
 	if (!policy->fast_switch_enabled) {
 		irq_work_sync(&sg_policy->irq_work);
+		kthread_cancel_work_sync(&sg_policy->work);
 	}
 }
 
@@ -1260,7 +1262,6 @@ static void sugov_limits(struct cpufreq_policy *policy)
 static struct cpufreq_governor ts_schedutil_gov = {
 	.name = "ts_schedutil",
 	.owner = THIS_MODULE,
-	.dynamic_switching = true,
 	.init = sugov_init,
 	.exit = sugov_exit,
 	.start = sugov_start,
@@ -1274,6 +1275,7 @@ struct cpufreq_governor *cpufreq_default_governor(void)
 	return &ts_schedutil_gov;
 }
 #endif
+
 static void sugov_update_min(struct cpufreq_policy *policy)
 {
 	int cpu, max_cap;
@@ -1498,12 +1500,11 @@ static void __init sugov_exynos_init(void)
 
 	pm_qos_add_notifier(PM_QOS_CLUSTER0_FREQ_MIN, &sugov_min_qos_notifier);
 	pm_qos_add_notifier(PM_QOS_CLUSTER1_FREQ_MIN, &sugov_min_qos_notifier);
-	//pm_qos_add_notifier(PM_QOS_CLUSTER2_FREQ_MIN, &sugov_min_qos_notifier);
 	cpu_pm_register_notifier(&sugov_pm_nb);
 
 	return;
 exit:
-	pr_info("%s: failed to initialized slack_timer, pm_qos handler check\n", __func__);
+	pr_info("%s: failed to initialized slack_timer, pm_qos handler\n", __func__);
 }
 
 static int __init sugov_register(void)
