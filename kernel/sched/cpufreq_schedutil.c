@@ -1203,9 +1203,6 @@ static void sugov_stop(struct cpufreq_policy *policy)
 static void sugov_limits(struct cpufreq_policy *policy)
 {
 	struct sugov_policy *sg_policy = policy->governor_data;
-	unsigned long flags;
-	unsigned int ret;
-	int cpu;
 
 	mutex_lock(&global_tunables_lock);
 
