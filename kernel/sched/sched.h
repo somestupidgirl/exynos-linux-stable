@@ -1839,6 +1839,13 @@ extern bool walt_disabled;
 
 extern unsigned long cpu_util(int cpu);
 
+struct sched_walt_cpu_load {
+	unsigned long prev_window_util;
+	unsigned long nl;
+	unsigned long pl;
+	u64 ws;
+};
+
 #endif /* CONFIG_SMP */
 
 static inline void sched_rt_avg_update(struct rq *rq, u64 rt_delta)
