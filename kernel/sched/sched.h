@@ -2183,6 +2183,12 @@ static inline u64 sched_ktime_clock(void)
 #endif /* CONFIG_SCHED_WALT */
 
 #ifdef CONFIG_CPU_FREQ
+
+/**
+ * Default limit transition rate.
+ */
+#define	DEFAULT_LATENCY_MULTIPLIER	50
+
 DECLARE_PER_CPU(struct update_util_data *, cpufreq_update_util_data);
 
 /**
