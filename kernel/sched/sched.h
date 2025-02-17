@@ -2166,6 +2166,15 @@ static inline u64 irq_time_read(int cpu)
 }
 #endif /* CONFIG_IRQ_TIME_ACCOUNTING */
 
+#ifdef CONFIG_SCHED_WALT
+u64 sched_ktime_clock(void);
+#else /* CONFIG_SCHED_WALT */
+static inline u64 sched_ktime_clock(void)
+{
+	return sched_clock();
+}
+#endif /* CONFIG_SCHED_WALT */
+
 #ifdef CONFIG_CPU_FREQ
 DECLARE_PER_CPU(struct update_util_data *, cpufreq_update_util_data);
 
