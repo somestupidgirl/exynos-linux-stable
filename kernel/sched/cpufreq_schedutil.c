@@ -35,8 +35,6 @@
 DECLARE_KAIRISTICS(cpufreq, 32, 25, 24, 25);
 #endif
 
-unsigned long boosted_cpu_util(int cpu, unsigned long other_util);
-
 /* Stub out fast switch routines present on mainline to reduce the backport
  * overhead. */
 #define cpufreq_driver_fast_switch(x, y) 0

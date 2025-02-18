@@ -1839,6 +1839,9 @@ extern bool walt_disabled;
 
 extern unsigned long cpu_util(int cpu);
 
+extern unsigned long
+boosted_cpu_util(int cpu, unsigned long other_util);
+
 struct sched_walt_cpu_load {
 	unsigned long prev_window_util;
 	unsigned long nl;
