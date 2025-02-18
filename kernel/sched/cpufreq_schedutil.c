@@ -637,7 +637,7 @@ static void sugov_irq_work(struct irq_work *irq_work)
 /************************ Governor externals ***********************/
 static void update_min_rate_limit_us(struct sugov_policy *sg_policy);
 void sugov_update_rate_limit_us(struct cpufreq_policy *policy,
-			int up_rate_limit, int down_rate_limit)
+			int up_rate_limit_ms, int down_rate_limit_ms)
 {
 	struct sugov_policy *sg_policy;
 	struct sugov_tunables *tunables;
@@ -650,11 +650,11 @@ void sugov_update_rate_limit_us(struct cpufreq_policy *policy,
 	if (!tunables)
 		return;
 
-	tunables->up_rate_limit_us = (unsigned int)up_rate_limit;
-	tunables->down_rate_limit_us = (unsigned int)down_rate_limit;
+	tunables->up_rate_limit_us = (unsigned int)(up_rate_limit_ms * USEC_PER_MSEC);
+	tunables->down_rate_limit_us = (unsigned int)(down_rate_limit_ms * USEC_PER_MSEC);
 
-	sg_policy->up_rate_delay_ns = up_rate_limit * NSEC_PER_USEC;
-	sg_policy->down_rate_delay_ns = down_rate_limit * NSEC_PER_USEC;
+	sg_policy->up_rate_delay_ns = up_rate_limit_ms * NSEC_PER_MSEC;
+	sg_policy->down_rate_delay_ns = down_rate_limit_ms * NSEC_PER_MSEC;
 
 	update_min_rate_limit_us(sg_policy);
 }
