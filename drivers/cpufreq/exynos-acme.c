@@ -342,6 +342,38 @@ static int __exynos_cpufreq_target(struct cpufreq_policy *policy,
 		pr_err("oops, inconsistency between domain->old:%d, real clk:%d\n",
 			domain->old, get_freq(domain));
 
+/* WIP */
+#if 0
+	if (cpufreq_can_do_remote_dvfs(policy)) {
+		struct cpufreq_freqs freqs;
+		freqs.new = target_freq;
+		freqs.old = policy->cur;
+		freqs.cpu = policy->cpu;
+		cpufreq_freq_transition_begin(policy, &freqs);
+
+		/*
+		 * Update target_freq.
+		 * Updated target_freq is in between minimum and maximum PM QoS/policy,
+		 * priority of policy is higher.
+		 */
+		index = cpufreq_frequency_table_target(policy, target_freq, relation);
+		if (index < 0) {
+			pr_err("target frequency(%d) out of range\n", target_freq);
+			goto out;
+		}
+
+		target_freq = index_to_freq(domain->freq_table, index);
+
+		/* Perform frequency scaling. */
+		ret = scale(domain, policy, target_freq);
+
+		cpufreq_freq_transition_end(policy, &freqs);
+
+		if (ret)
+			goto out;
+	}
+#endif
+
 	/*
 	 * Update target_freq.
 	 * Updated target_freq is in between minimum and maximum PM QoS/policy,
