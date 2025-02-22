@@ -3514,8 +3514,6 @@ static int sd_probe(struct device *dev)
 	put_disk(gd);
  out_free:
 	kfree(sdkp);
- out_free_devt:
-	kfree(sd_devt);
  out:
 	scsi_autopm_put_device(sdp);
 	return error;

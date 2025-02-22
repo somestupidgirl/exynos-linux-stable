@@ -2329,15 +2329,10 @@ void blk_account_io_done(struct request *req)
 		part_dec_in_flight(part, rw);
 		if (req_op(req) == REQ_OP_DISCARD)
 			part_stat_inc(cpu, part, discard_ios);
-		if (!(req->cmd_flags & REQ_STARTED))
-			part_stat_inc(cpu, part, flush_ios);
 
 		hd_struct_put(part);
 		part_stat_unlock();
 	}
-
-	if (req->cmd_flags & REQ_FLUSH_SEQ)
-		req->q->flush_ios++;
 }
 
 #ifdef CONFIG_PM

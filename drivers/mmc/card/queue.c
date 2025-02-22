@@ -482,7 +482,7 @@ int mmc_queue_suspend(struct mmc_queue *mq, int wait)
 			}
 
 			while ((req = blk_fetch_request(q)) != NULL) {
-				req->cmd_flags |= REQ_QUIET;
+				req->cmd_flags |= RQF_QUIET;
 				__blk_end_request_all(req, -EIO);
 			}
 
