@@ -4,12 +4,11 @@
 
 printf "Cleaning\n"
 cd $CUR_DIR
-if [ ! -z "$1" ]
-then 
+if [ ! -z "$1" ]; then
   if [ "$1" == "all" ]; then
-	clean_prebuilt
-	clean
-	git reset --hard
+	  clean
+    clean_prebuilt
+    clean_kernelsu
   elif [ "$1" == "lite" ]; then
     clean_temp
     clean_external
@@ -18,4 +17,5 @@ then
   fi
 else
   clean
+  clean_kernelsu
 fi
