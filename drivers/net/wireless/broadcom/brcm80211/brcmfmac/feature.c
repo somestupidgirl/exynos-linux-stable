@@ -117,6 +117,8 @@ static void brcmf_feat_firmware_overrides(struct brcmf_pub *drv)
 		}
 	}
 
+	feat_flags |= BIT(BRCMF_FEAT_MONITOR_FLAG);
+
 	if (!feat_flags)
 		return;
 
