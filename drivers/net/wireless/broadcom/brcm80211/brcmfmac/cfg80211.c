@@ -438,28 +438,6 @@ static int brcmf_vif_add_validate(struct brcmf_cfg80211_info *cfg,
 	return cfg80211_check_combinations(cfg->wiphy, 1, 0, iftype_num);
 }
 
-static int brcmf_set_monitor(struct brcmf_cfg80211_info *cfg)
-{
-	struct brcmf_cfg80211_vif *pos;
-	struct brcmf_if *ifp = brcmf_get_ifp(cfg->pub, 0);
-	struct iface_combination_params params = {
-		.num_different_channels = 1,
-	};
-	s32 mon;
-	s32 err = 0;
-
-	list_for_each_entry(pos, &cfg->vif_list, list)
-		params.iftype_num[pos->wdev.iftype]++;
-
-	mon = params.iftype_num[NL80211_IFTYPE_MONITOR] ? 2 : 0;
-
-	err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_MONITOR, mon);
-	if (err)
-		brcmf_err("failed to set monitor mode err=%d\n", err);
-
-	return err;
-}
-
 static void convert_key_from_CPU(struct brcmf_wsec_key *key,
 				 struct brcmf_wsec_key_le *key_le)
 {
@@ -607,10 +585,6 @@ struct wireless_dev *brcmf_ap_add_vif(struct wiphy *wiphy, const char *name,
 	struct brcmf_cfg80211_vif *vif;
 	int err;
 
-	if (type != NL80211_IFTYPE_STATION && type != NL80211_IFTYPE_AP &&
-	    type != NL80211_IFTYPE_MONITOR)
-	    return ERR_PTR(-EINVAL);
-
 	if (brcmf_cfg80211_vif_event_armed(cfg))
 		return ERR_PTR(-EBUSY);
 
@@ -646,17 +620,12 @@ struct wireless_dev *brcmf_ap_add_vif(struct wiphy *wiphy, const char *name,
 		goto fail;
 	}
 
-	if (type == NL80211_IFTYPE_MONITOR)
-		ifp->ndev->type = ARPHRD_IEEE80211_RADIOTAP;
-
 	strncpy(ifp->ndev->name, name, sizeof(ifp->ndev->name) - 1);
 	err = brcmf_net_attach(ifp, true);
 	if (err) {
 		brcmf_err("Registering netdevice failed\n");
 		goto fail;
 	}
-
-	brcmf_set_monitor(cfg);
 
 	return &ifp->vif->wdev;
 
@@ -676,22 +645,6 @@ static bool brcmf_is_apmode(struct brcmf_cfg80211_vif *vif)
 static bool brcmf_is_ibssmode(struct brcmf_cfg80211_vif *vif)
 {
 	return vif->wdev.iftype == NL80211_IFTYPE_ADHOC;
-}
-
-static s32
-brcmf_cfg80211_set_monitor_channel(struct wiphy *wiphy,struct cfg80211_chan_def *chandef) {
-	struct brcmf_cfg80211_info *cfg = wiphy_to_cfg(wiphy);
-	struct brcmf_if *ifp = netdev_priv(cfg_to_ndev(cfg));
-	s32 err = 0;
-	u16 chanspec;
-
-	chanspec = chandef_to_chanspec(&cfg->d11inf, chandef);
-	err = brcmf_fil_iovar_int_set(ifp, "chanspec", chanspec);
-	if (err < 0) {
-		brcmf_err("Set Channel failed: chspec=%d, %d\n",
-		chanspec, err);
-	}
-	return 0;
 }
 
 static struct wireless_dev *brcmf_cfg80211_add_iface(struct wiphy *wiphy,
@@ -921,7 +874,6 @@ brcmf_cfg80211_change_iface(struct wiphy *wiphy, struct net_device *ndev,
 	struct brcmf_cfg80211_info *cfg = wiphy_to_cfg(wiphy);
 	struct brcmf_if *ifp = netdev_priv(ndev);
 	struct brcmf_cfg80211_vif *vif = ifp->vif;
-	s32 monitor = 0;
 	s32 infra = 0;
 	s32 ap = 0;
 	s32 err = 0;
@@ -966,8 +918,6 @@ brcmf_cfg80211_change_iface(struct wiphy *wiphy, struct net_device *ndev,
 	}
 	switch (type) {
 	case NL80211_IFTYPE_MONITOR:
-		monitor = 1;
-		break;
 	case NL80211_IFTYPE_WDS:
 		brcmf_err("type (%d) : currently we do not support this type\n",
 			  type);
@@ -1002,19 +952,10 @@ brcmf_cfg80211_change_iface(struct wiphy *wiphy, struct net_device *ndev,
 			err = -EAGAIN;
 			goto done;
 		}
-		if (!monitor)
-			brcmf_dbg(INFO, "IF Type = %s\n",
-			          brcmf_is_ibssmode(vif) ? "Adhoc" : "Infra");
-
+		brcmf_dbg(INFO, "IF Type = %s\n", brcmf_is_ibssmode(vif) ?
+			  "Adhoc" : "Infra");
 	}
 	ndev->ieee80211_ptr->iftype = type;
-
-	if (monitor)
-		ndev->type = ARPHRD_IEEE80211_RADIOTAP;
-	else
-		ndev->type = ARPHRD_ETHER;
-
-	brcmf_set_monitor(cfg);
 
 	brcmf_cfg80211_update_proto_addr_mode(&vif->wdev);
 
@@ -5220,7 +5161,6 @@ static struct cfg80211_ops brcmf_cfg80211_ops = {
 	.crit_proto_start = brcmf_cfg80211_crit_proto_start,
 	.crit_proto_stop = brcmf_cfg80211_crit_proto_stop,
 	.tdls_oper = brcmf_cfg80211_tdls_oper,
-	.set_monitor_channel = brcmf_cfg80211_set_monitor_channel,
 };
 
 struct cfg80211_ops *brcmf_cfg80211_get_ops(void)
@@ -5271,18 +5211,14 @@ void brcmf_free_vif(struct brcmf_cfg80211_vif *vif)
 void brcmf_cfg80211_free_netdev(struct net_device *ndev)
 {
 	struct brcmf_cfg80211_vif *vif;
-	struct brcmf_cfg80211_info *cfg;
 	struct brcmf_if *ifp;
 
 	ifp = netdev_priv(ndev);
-	cfg = ifp->drvr->config;
 	vif = ifp->vif;
 
 	if (vif)
 		brcmf_free_vif(vif);
 	free_netdev(ndev);
-
-	brcmf_set_monitor(cfg);
 }
 
 static bool brcmf_is_linkup(const struct brcmf_event_msg *e)
