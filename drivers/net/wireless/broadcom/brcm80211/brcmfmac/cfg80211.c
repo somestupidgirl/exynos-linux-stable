@@ -3311,7 +3311,6 @@ brcmf_notify_sched_scan_results(struct brcmf_if *ifp,
 	u32 bucket_map;
 	u32 result_count;
 	u32 status;
-	u32 datalen;
 
 	brcmf_dbg(SCAN, "Enter\n");
 
