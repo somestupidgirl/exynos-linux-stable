@@ -24,10 +24,12 @@ obj-$(CONFIG_WLAN_VENDOR_ZYDAS) += zydas/
 #obj-$(CONFIG_SOC_EXYNOS9810) += bcmdhd4361/dhd_custom_exynos.o
 #endif
 ifneq ($(CONFIG_BCMDHD_101_16),)
+EXTRA_CFLAGS += $(DHDCFLAGS) -DDHD_DEBUG
 obj-$(CONFIG_BCM4361)   += bcmdhd_101_16/
 obj-$(CONFIG_SOC_EXYNOS9810) += bcmdhd_101_16/dhd_custom_memprealloc.o
 obj-$(CONFIG_SOC_EXYNOS9810) += bcmdhd_101_16/dhd_custom_exynos.o
 else
+EXTRA_CFLAGS += $(DHDCFLAGS) -DDHD_DEBUG
 obj-$(CONFIG_BCM4361)   += bcmdhd_100_15/
 obj-$(CONFIG_SOC_EXYNOS9810) += bcmdhd_100_15/dhd_custom_memprealloc.o
 obj-$(CONFIG_SOC_EXYNOS9810) += bcmdhd_100_15/dhd_custom_exynos.o
