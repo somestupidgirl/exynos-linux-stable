@@ -173,6 +173,54 @@
  */
 
 /**
+ * DOC: WPA/WPA2 EAPOL handshake offload
+ *
+ * By setting @NL80211_EXT_FEATURE_4WAY_HANDSHAKE_STA_PSK flag drivers
+ * can indicate they support offloading EAPOL handshakes for WPA/WPA2
+ * preshared key authentication. In %NL80211_CMD_CONNECT the preshared
+ * key should be specified using %NL80211_ATTR_PMK. Drivers supporting
+ * this offload may reject the %NL80211_CMD_CONNECT when no preshared
+ * key material is provided, for example when that driver does not
+ * support setting the temporal keys through %CMD_NEW_KEY.
+ */
+
+/**
+ * DOC: FILS shared key authentication offload
+ *
+ * FILS shared key authentication offload can be advertized by drivers by
+ * setting @NL80211_EXT_FEATURE_FILS_SK_OFFLOAD flag. The drivers that support
+ * FILS shared key authentication offload should be able to construct the
+ * authentication and association frames for FILS shared key authentication and
+ * eventually do a key derivation as per IEEE 802.11ai. The below additional
+ * parameters should be given to driver in %NL80211_CMD_CONNECT.
+ *	%NL80211_ATTR_FILS_ERP_USERNAME - used to construct keyname_nai
+ *	%NL80211_ATTR_FILS_ERP_REALM - used to construct keyname_nai
+ *	%NL80211_ATTR_FILS_ERP_NEXT_SEQ_NUM - used to construct erp message
+ *	%NL80211_ATTR_FILS_ERP_RRK - used to generate the rIK and rMSK
+ * rIK should be used to generate an authentication tag on the ERP message and
+ * rMSK should be used to derive a PMKSA.
+ * rIK, rMSK should be generated and keyname_nai, sequence number should be used
+ * as specified in IETF RFC 6696.
+ *
+ * When FILS shared key authentication is completed, driver needs to provide the
+ * below additional parameters to userspace.
+ *	%NL80211_ATTR_FILS_KEK - used for key renewal
+ *	%NL80211_ATTR_FILS_ERP_NEXT_SEQ_NUM - used in further EAP-RP exchanges
+ *	%NL80211_ATTR_PMKID - used to identify the PMKSA used/generated
+ *	%Nl80211_ATTR_PMK - used to update PMKSA cache in userspace
+ * The PMKSA can be maintained in userspace persistently so that it can be used
+ * later after reboots or wifi turn off/on also.
+ *
+ * %NL80211_ATTR_FILS_CACHE_ID is the cache identifier advertized by a FILS
+ * capable AP supporting PMK caching. It specifies the scope within which the
+ * PMKSAs are cached in an ESS. %NL80211_CMD_SET_PMKSA and
+ * %NL80211_CMD_DEL_PMKSA are enhanced to allow support for PMKSA caching based
+ * on FILS cache identifier. Additionally %NL80211_ATTR_PMK is used with
+ * %NL80211_SET_PMKSA to specify the PMK corresponding to a PMKSA for driver to
+ * use in a FILS shared key connection with PMKSA caching.
+ */
+
+/**
  * enum nl80211_commands - supported nl80211 commands
  *
  * @NL80211_CMD_UNSPEC: unspecified command to catch errors
@@ -370,10 +418,18 @@
  * @NL80211_CMD_NEW_SURVEY_RESULTS: survey data notification (as a reply to
  *	NL80211_CMD_GET_SURVEY and on the "scan" multicast group)
  *
- * @NL80211_CMD_SET_PMKSA: Add a PMKSA cache entry, using %NL80211_ATTR_MAC
- *	(for the BSSID) and %NL80211_ATTR_PMKID.
+ * @NL80211_CMD_SET_PMKSA: Add a PMKSA cache entry using %NL80211_ATTR_MAC
+ *	(for the BSSID), %NL80211_ATTR_PMKID, and optionally %NL80211_ATTR_PMK
+ *	(PMK is used for PTKSA derivation in case of FILS shared key offload) or
+ *	using %NL80211_ATTR_SSID, %NL80211_ATTR_FILS_CACHE_ID,
+ *	%NL80211_ATTR_PMKID, and %NL80211_ATTR_PMK in case of FILS
+ *	authentication where %NL80211_ATTR_FILS_CACHE_ID is the identifier
+ *	advertized by a FILS capable AP identifying the scope of PMKSA in an
+ *	ESS.
  * @NL80211_CMD_DEL_PMKSA: Delete a PMKSA cache entry, using %NL80211_ATTR_MAC
- *	(for the BSSID) and %NL80211_ATTR_PMKID.
+ *	(for the BSSID) and %NL80211_ATTR_PMKID or using %NL80211_ATTR_SSID,
+ *	%NL80211_ATTR_FILS_CACHE_ID, and %NL80211_ATTR_PMKID in case of FILS
+ *	authentication.
  * @NL80211_CMD_FLUSH_PMKSA: Flush all PMKSA cache entries.
  *
  * @NL80211_CMD_REG_CHANGE: indicates to userspace the regulatory domain
@@ -1994,6 +2050,37 @@ enum nl80211_commands {
  *	better BSSs. The attribute value is a packed structure
  *	value as specified by &struct nl80211_bss_select_rssi_adjust.
  *
+ * @NL80211_ATTR_TIMEOUT_REASON: The reason for which an operation timed out.
+ *	u32 attribute with an &enum nl80211_timeout_reason value. This is used,
+ *	e.g., with %NL80211_CMD_CONNECT event.
+ *
+ * @NL80211_ATTR_FILS_ERP_USERNAME: EAP Re-authentication Protocol (ERP)
+ *	username part of NAI used to refer keys rRK and rIK. This is used with
+ *	%NL80211_CMD_CONNECT.
+ *
+ * @NL80211_ATTR_FILS_ERP_REALM: EAP Re-authentication Protocol (ERP) realm part
+ *	of NAI specifying the domain name of the ER server. This is used with
+ *	%NL80211_CMD_CONNECT.
+ *
+ * @NL80211_ATTR_FILS_ERP_NEXT_SEQ_NUM: Unsigned 16-bit ERP next sequence number
+ *	to use in ERP messages. This is used in generating the FILS wrapped data
+ *	for FILS authentication and is used with %NL80211_CMD_CONNECT.
+ *
+ * @NL80211_ATTR_FILS_ERP_RRK: ERP re-authentication Root Key (rRK) for the
+ *	NAI specified by %NL80211_ATTR_FILS_ERP_USERNAME and
+ *	%NL80211_ATTR_FILS_ERP_REALM. This is used for generating rIK and rMSK
+ *	from successful FILS authentication and is used with
+ *	%NL80211_CMD_CONNECT.
+ *
+ * @NL80211_ATTR_FILS_CACHE_ID: A 2-octet identifier advertized by a FILS AP
+ *	identifying the scope of PMKSAs. This is used with
+ *	@NL80211_CMD_SET_PMKSA and @NL80211_CMD_DEL_PMKSA.
+ *
+ * @NL80211_ATTR_PMK: attribute for passing PMK key material. Used with
+ *	%NL80211_CMD_SET_PMKSA for the PMKSA identified by %NL80211_ATTR_PMKID.
+ *	For %NL80211_CMD_CONNECT it is used to provide PSK for offloading 4-way
+ *	handshake for WPA/WPA2-PSK networks.
+ *
  * @NUM_NL80211_ATTR: total number of nl80211_attrs available
  * @NL80211_ATTR_MAX: highest attribute number currently defined
  * @__NL80211_ATTR_AFTER_LAST: internal use
@@ -2402,6 +2489,16 @@ enum nl80211_attrs {
 
 	NL80211_ATTR_SCHED_SCAN_RELATIVE_RSSI,
 	NL80211_ATTR_SCHED_SCAN_RSSI_ADJUST,
+
+	NL80211_ATTR_TIMEOUT_REASON,
+
+	NL80211_ATTR_FILS_ERP_USERNAME,
+	NL80211_ATTR_FILS_ERP_REALM,
+	NL80211_ATTR_FILS_ERP_NEXT_SEQ_NUM,
+	NL80211_ATTR_FILS_ERP_RRK,
+	NL80211_ATTR_FILS_CACHE_ID,
+
+	NL80211_ATTR_PMK,
 
 	/* add attributes here, update the policy in nl80211.c */
 
@@ -4733,6 +4830,14 @@ enum nl80211_feature_flags {
  * @NL80211_EXT_FEATURE_SCHED_SCAN_RELATIVE_RSSI: The driver supports sched_scan
  *	for reporting BSSs with better RSSI than the current connected BSS
  *	(%NL80211_ATTR_SCHED_SCAN_RELATIVE_RSSI).
+ * @NL80211_EXT_FEATURE_CQM_RSSI_LIST: With this driver the
+ *	%NL80211_ATTR_CQM_RSSI_THOLD attribute accepts a list of zero or more
+ *	RSSI threshold values to monitor rather than exactly one threshold.
+ * @NL80211_EXT_FEATURE_FILS_SK_OFFLOAD: Driver SME supports FILS shared key
+ *	authentication with %NL80211_CMD_CONNECT.
+ * @NL80211_EXT_FEATURE_4WAY_HANDSHAKE_STA_PSK: Device wants to do 4-way
+ *	handshake with PSK in station mode (PSK is passed as part of the connect
+ *	and associate commands), doing it in the host might not be supported.
  *
  * @NUM_NL80211_EXT_FEATURES: number of extended features.
  * @MAX_NL80211_EXT_FEATURES: highest extended feature index.
@@ -4751,6 +4856,9 @@ enum nl80211_ext_feature_index {
 	NL80211_EXT_FEATURE_MGMT_TX_RANDOM_TA,
 	NL80211_EXT_FEATURE_MGMT_TX_RANDOM_TA_CONNECTED,
 	NL80211_EXT_FEATURE_SCHED_SCAN_RELATIVE_RSSI,
+	NL80211_EXT_FEATURE_CQM_RSSI_LIST,
+	NL80211_EXT_FEATURE_FILS_SK_OFFLOAD,
+	NL80211_EXT_FEATURE_4WAY_HANDSHAKE_STA_PSK,
 
 	/* add new features before the definition below */
 	NUM_NL80211_EXT_FEATURES,
@@ -4787,6 +4895,21 @@ enum nl80211_probe_resp_offload_support_attr {
 enum nl80211_connect_failed_reason {
 	NL80211_CONN_FAIL_MAX_CLIENTS,
 	NL80211_CONN_FAIL_BLOCKED_CLIENT,
+};
+
+/**
+ * enum nl80211_timeout_reason - timeout reasons
+ *
+ * @NL80211_TIMEOUT_UNSPECIFIED: Timeout reason unspecified.
+ * @NL80211_TIMEOUT_SCAN: Scan (AP discovery) timed out.
+ * @NL80211_TIMEOUT_AUTH: Authentication timed out.
+ * @NL80211_TIMEOUT_ASSOC: Association timed out.
+ */
+enum nl80211_timeout_reason {
+	NL80211_TIMEOUT_UNSPECIFIED,
+	NL80211_TIMEOUT_SCAN,
+	NL80211_TIMEOUT_AUTH,
+	NL80211_TIMEOUT_ASSOC,
 };
 
 /**
