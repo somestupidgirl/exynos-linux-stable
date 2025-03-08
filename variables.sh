@@ -182,11 +182,15 @@ disable_nethunter() {
 	KERNEL_NAME="$KERNEL_NAME"
 }
 
+patch_wireguard() {
+	sed -i 's|#define priv_destructor destructor|#define priv_destructor priv_destructor|g' "$CUR_DIR"/net/wireguard/compat/compat.h
+}
+
 # Patch WiFi drivers for stock ROMs
 patch_wifi() {
 	printf "Config: Patching Wifi to Old Driver\n"
 
-	sed -i 's|CONFIG_BCMDHD_101_16=y|# CONFIG_BCMDHD_101_16 is not set|g' "$CUR_DIR"/arch/arm64/configs/exynos9810_temp_defconfig
+	 "$CUR_DIR"/arch/arm64/configs/exynos9810_temp_defconfig
 	sed -i 's|# CONFIG_BCMDHD_100_15 is not set|CONFIG_BCMDHD_100_15=y|g' "$CUR_DIR"/arch/arm64/configs/exynos9810_temp_defconfig
 
 	KERNEL_NAME="Kernel-a11"

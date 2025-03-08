@@ -64,6 +64,8 @@ elif [ "$NETHUNTER" == false ]; then
   disable_nethunter
 fi
 
+patch_wireguard
+
 make exynos9810_temp_defconfig -j$(nproc --all)
 make -j$(nproc --all)
 
