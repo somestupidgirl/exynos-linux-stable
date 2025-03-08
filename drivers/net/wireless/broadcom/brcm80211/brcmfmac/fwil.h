@@ -60,6 +60,8 @@
 #define BRCMF_C_GET_PM				85
 #define BRCMF_C_SET_PM				86
 #define BRCMF_C_GET_REVINFO			98
+#define BRCMF_C_GET_MONITOR			107
+#define BRCMF_C_SET_MONITOR			108
 #define BRCMF_C_GET_CURR_RATESET		114
 #define BRCMF_C_GET_AP				117
 #define BRCMF_C_SET_AP				118
@@ -85,6 +87,7 @@
 #define BRCMF_C_SET_SCAN_PASSIVE_TIME		258
 #define BRCMF_C_GET_VAR				262
 #define BRCMF_C_SET_VAR				263
+#define BRCMF_C_SET_WSEC_PMK			268
 
 s32 brcmf_fil_cmd_data_set(struct brcmf_if *ifp, u32 cmd, void *data, u32 len);
 s32 brcmf_fil_cmd_data_get(struct brcmf_if *ifp, u32 cmd, void *data, u32 len);

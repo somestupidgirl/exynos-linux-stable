@@ -21,6 +21,7 @@
 #include <net/cfg80211.h>
 #include <net/rtnetlink.h>
 #include <net/addrconf.h>
+#include <net/ieee80211_radiotap.h>
 #include <net/ipv6.h>
 #include <brcmu_utils.h>
 #include <brcmu_wifi.h>
@@ -37,10 +38,115 @@
 #include "proto.h"
 #include "pcie.h"
 #include "common.h"
+/* NEXMON */
+#include <linux/if_arp.h>
+#include <linux/netlink.h>
+#include "nexmon_ioctls.h"
 
 #define MAX_WAIT_FOR_8021X_TX			msecs_to_jiffies(950)
 
 #define BRCMF_BSSIDX_INVALID			-1
+
+/* NEXMON */
+#define NETLINK_USER				31
+#define NEXUDP_IOCTL				0
+
+#define MONITOR_DISABLED			0
+#define MONITOR_IEEE80211			1
+#define MONITOR_RADIOTAP			2
+#define MONITOR_LOG_ONLY			3
+#define MONITOR_DROP_FRM			4
+#define MONITOR_IPV4_UDP			5
+
+static struct netlink_kernel_cfg cfg = {0};
+static struct sock *nl_sock = NULL;
+static struct net_device *ndev_global = NULL;
+
+struct nexudp_header {
+	char nex[3];
+	char type;
+	int securitycookie;
+} __packed;
+
+struct nexudp_ioctl_header {
+	struct nexudp_header nexudphdr;
+	unsigned int cmd;
+	unsigned int set;
+	char payload[1];
+} __packed;
+
+static void
+nexmon_nl_ioctl_handler(struct sk_buff *skb)
+{
+	struct nlmsghdr *nlh = (struct nlmsghdr *) skb->data;
+	struct nexudp_ioctl_header *frame = (struct nexudp_ioctl_header *) nlmsg_data(nlh);
+	struct brcmf_if *ifp = netdev_priv(ndev_global);
+	struct sk_buff *skb_out;
+	struct nlmsghdr *nlh_tx;
+
+	brcmf_err("NEXMON: %s: Enter\n", __FUNCTION__);
+
+	brcmf_err("NEXMON: %s: %08x %d %d\n", __FUNCTION__, *(int *) frame->nexudphdr.nex, nlmsg_len(nlh), skb->len);
+
+	if (memcmp(frame->nexudphdr.nex, "NEX", 3)) {
+		brcmf_err("NEXMON: %s: invalid nexudp_ioctl_header\n", __FUNCTION__);
+		return;
+	}
+
+	if (frame->nexudphdr.type != NEXUDP_IOCTL) {
+		brcmf_err("NEXMON: %s: invalid frame type\n", __FUNCTION__);
+		return;
+	}
+
+	if (ifp == NULL) {
+		brcmf_err("NEXMON: %s: ifp is NULL\n", __FUNCTION__);
+		return;
+	}
+
+	if (frame->set) {
+		brcmf_err("NEXMON: %s: calling brcmf_fil_cmd_data_set, cmd: %d\n", __FUNCTION__, frame->cmd);
+		brcmf_fil_cmd_data_set(ifp, frame->cmd, frame->payload, nlmsg_len(nlh) - sizeof(struct nexudp_ioctl_header) + sizeof(char));
+
+		if (frame->cmd == BRCMF_C_SET_MONITOR) {
+			brcmf_err("NEXMON: %s: WLC_SET_MONITOR = %d\n", __FUNCTION__, *(unsigned int *) frame->payload);
+			switch(*(unsigned int *) frame->payload) {
+			case MONITOR_IEEE80211:
+				ndev_global->type = ARPHRD_IEEE80211;
+				ndev_global->ieee80211_ptr->iftype = NL80211_IFTYPE_MONITOR;
+				break;
+			case MONITOR_RADIOTAP:
+				ndev_global->type = ARPHRD_IEEE80211_RADIOTAP;
+				ndev_global->ieee80211_ptr->iftype = NL80211_IFTYPE_MONITOR;
+				break;
+			case MONITOR_DISABLED:
+			case MONITOR_LOG_ONLY:
+			case MONITOR_DROP_FRM:
+			case MONITOR_IPV4_UDP:
+			default:
+				ndev_global->type = ARPHRD_ETHER;
+				ndev_global->ieee80211_ptr->iftype = NL80211_IFTYPE_STATION;
+				break;
+			}
+		}
+
+		skb_out = nlmsg_new(4, 0);
+		nlh_tx = nlmsg_put(skb_out, 0, 0, NLMSG_DONE, 4, 0);
+		NETLINK_CB(skb_out).dst_group = 0; /* not in mcast group */
+		memcpy(nlmsg_data(nlh_tx), "ACK", 4);
+		nlmsg_unicast(nl_sock, skb_out, nlh->nlmsg_pid);
+	} else {
+		brcmf_err("NEXMON: %s: calling brcmf_fil_cmd_data_get, cmd: %d\n", __FUNCTION__, frame->cmd);
+		brcmf_fil_cmd_data_get(ifp, frame->cmd, frame->payload, nlmsg_len(nlh) - sizeof(struct nexudp_ioctl_header) + sizeof(char));
+
+		skb_out = nlmsg_new(nlmsg_len(nlh), 0);
+		nlh_tx = nlmsg_put(skb_out, 0, 0, NLMSG_DONE, nlmsg_len(nlh), 0);
+		NETLINK_CB(skb_out).dst_group = 0; /* not in mcast group */
+		memcpy(nlmsg_data(nlh_tx), frame, nlmsg_len(nlh));
+		nlmsg_unicast(nl_sock, skb_out, nlh->nlmsg_pid);
+	}
+
+	brcmf_err("NEXMON: %s: Exit\n", __FUNCTION__);
+}
 
 char *brcmf_ifname(struct brcmf_if *ifp)
 {
@@ -304,6 +410,30 @@ void brcmf_netif_rx(struct brcmf_if *ifp, struct sk_buff *skb)
 		netif_rx_ni(skb);
 }
 
+void brcmf_netif_mon_rx(struct brcmf_if *ifp, struct sk_buff *skb)
+{
+	if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MONITOR_FMT_RADIOTAP)) {
+		/* Do nothing */
+	} else {
+		struct ieee80211_radiotap_header *radiotap;
+
+		/* TODO: use RX status to fill some radiotap data */
+		radiotap = skb_push(skb, sizeof(*radiotap));
+		memset(radiotap, 0, sizeof(*radiotap));
+		radiotap->it_len = cpu_to_le16(sizeof(*radiotap));
+
+		/* TODO: 4 bytes with receive status? */
+		skb->len -= 4;
+	}
+
+	skb->dev = ifp->ndev;
+	skb_reset_mac_header(skb);
+	skb->pkt_type = PACKET_OTHERHOST;
+	skb->protocol = htons(ETH_P_802_2);
+
+	brcmf_netif_rx(ifp, skb);
+}
+
 static int brcmf_rx_hdrpull(struct brcmf_pub *drvr, struct sk_buff *skb,
 			    struct brcmf_if **ifp)
 {
@@ -473,7 +603,11 @@ static int brcmf_netdev_open(struct net_device *ndev)
 	}
 
 	/* Clear, carrier, set when connected or AP mode. */
-	netif_carrier_off(ndev);
+	if (ndev->type == ARPHRD_IEEE80211_RADIOTAP)
+		netif_carrier_on(ndev);
+	else
+		netif_carrier_off(ndev);
+
 	return 0;
 }
 
@@ -495,6 +629,9 @@ int brcmf_net_attach(struct brcmf_if *ifp, bool rtnl_locked)
 	brcmf_dbg(TRACE, "Enter, bsscfgidx=%d mac=%pM\n", ifp->bsscfgidx,
 		  ifp->mac_addr);
 	ndev = ifp->ndev;
+	/* NEXMON */
+	if (!ndev_global)
+		ndev_global = ndev;
 
 	/* set appropriate operations */
 	ndev->netdev_ops = &brcmf_netdev_ops_pri;
@@ -527,7 +664,7 @@ fail:
 	return -EBADE;
 }
 
-static void brcmf_net_detach(struct net_device *ndev, bool rtnl_locked)
+void brcmf_net_detach(struct net_device *ndev, bool rtnl_locked)
 {
 	if (ndev->reg_state == NETREG_REGISTERED) {
 		if (rtnl_locked)
@@ -537,6 +674,73 @@ static void brcmf_net_detach(struct net_device *ndev, bool rtnl_locked)
 	} else {
 		brcmf_cfg80211_free_netdev(ndev);
 	}
+
+	/* NEXMON */
+	if (ndev == ndev_global)
+		ndev_global = NULL;
+}
+
+static int brcmf_net_mon_open(struct net_device *ndev)
+{
+	struct brcmf_if *ifp = netdev_priv(ndev);
+	u32 monitor;
+	int err;
+
+	brcmf_dbg(TRACE, "Enter\n");
+
+	err = brcmf_fil_cmd_int_get(ifp, BRCMF_C_GET_MONITOR, &monitor);
+	if (err) {
+		brcmf_err("BRCMF_C_GET_MONITOR error (%d)\n", err);
+		return err;
+	} else if (monitor) {
+		brcmf_err("Monitor mode is already enabled\n");
+		return -EEXIST;
+	}
+
+	monitor = 3;
+	err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_MONITOR, monitor);
+	if (err)
+		brcmf_err("BRCMF_C_SET_MONITOR error (%d)\n", err);
+
+	return err;
+}
+
+static int brcmf_net_mon_stop(struct net_device *ndev)
+{
+	struct brcmf_if *ifp = netdev_priv(ndev);
+	u32 monitor;
+	int err;
+
+	brcmf_dbg(TRACE, "Enter\n");
+
+	monitor = 0;
+	err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_MONITOR, monitor);
+	if (err)
+		brcmf_err("BRCMF_C_SET_MONITOR error (%d)\n", err);
+
+	return err;
+}
+
+static const struct net_device_ops brcmf_netdev_ops_mon = {
+	.ndo_open = brcmf_net_mon_open,
+	.ndo_stop = brcmf_net_mon_stop,
+};
+
+int brcmf_net_mon_attach(struct brcmf_if *ifp)
+{
+	struct net_device *ndev;
+	int err;
+
+	brcmf_dbg(TRACE, "Enter\n");
+
+	ndev = ifp->ndev;
+	ndev->netdev_ops = &brcmf_netdev_ops_mon;
+
+	err = register_netdevice(ndev);
+	if (err)
+		brcmf_err("Failed to register %s device\n", ndev->name);
+
+	return err;
 }
 
 void brcmf_net_setcarrier(struct brcmf_if *ifp, bool on)
@@ -657,7 +861,8 @@ struct brcmf_if *brcmf_add_if(struct brcmf_pub *drvr, s32 bsscfgidx, s32 ifidx,
 		if (!ndev)
 			return ERR_PTR(-ENOMEM);
 
-		ndev->destructor = brcmf_cfg80211_free_netdev;
+		ndev->needs_free_netdev = true;
+		ndev->priv_destructor = brcmf_cfg80211_free_netdev;
 		ifp = netdev_priv(ndev);
 		ifp->ndev = ndev;
 		/* store mapping ifidx to bsscfgidx */
@@ -1199,11 +1404,21 @@ int __init brcmf_core_init(void)
 	if (!schedule_work(&brcmf_driver_work))
 		return -EBUSY;
 
+	/* NEXMON netlink init */
+	cfg.input = nexmon_nl_ioctl_handler;
+	nl_sock = netlink_kernel_create(&init_net, NETLINK_USER, &cfg);
+	if (!nl_sock) {
+		brcmf_err("NEXMON: %s: Error creating netlink socket\n", __FUNCTION__);
+	}
+
 	return 0;
 }
 
 void __exit brcmf_core_exit(void)
 {
+	/* NEXMON netlink release */
+	netlink_kernel_release(nl_sock);
+
 	cancel_work_sync(&brcmf_driver_work);
 
 #ifdef CONFIG_BRCMFMAC_SDIO

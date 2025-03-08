@@ -141,7 +141,8 @@ static void dummy_setup(struct net_device *dev)
 	/* Initialize the device structure. */
 	dev->netdev_ops = &dummy_netdev_ops;
 	dev->ethtool_ops = &dummy_ethtool_ops;
-	dev->destructor = free_netdev;
+	dev->needs_free_netdev = true;
+	dev->priv_destructor = dummy_free_netdev;
 
 	/* Fill in device structure with ethernet-generic values. */
 	dev->flags |= IFF_NOARP;
@@ -193,7 +194,6 @@ static int __init dummy_init_one(void)
 	return 0;
 
 err:
-	free_netdev(dev_dummy);
 	return err;
 }
 

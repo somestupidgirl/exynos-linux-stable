@@ -27,6 +27,7 @@
 #include "feature.h"
 #include "common.h"
 
+#define BRCMF_FW_UNSUPPORTED	23
 
 /*
  * expand feature list to array of feature strings.
@@ -47,6 +48,9 @@ static const struct brcmf_feat_fwcap brcmf_fwcap_map[] = {
 	{ BRCMF_FEAT_MBSS, "mbss" },
 	{ BRCMF_FEAT_MCHAN, "mchan" },
 	{ BRCMF_FEAT_P2P, "p2p" },
+	{ BRCMF_FEAT_MONITOR, "monitor" },
+	{ BRCMF_FEAT_MONITOR_FLAG, "rtap" },
+	{ BRCMF_FEAT_MONITOR_FMT_RADIOTAP, "rtap" },
 };
 
 #ifdef DEBUG
@@ -90,6 +94,44 @@ static int brcmf_feat_debugfs_read(struct seq_file *seq, void *data)
 }
 #endif /* DEBUG */
 
+struct brcmf_feat_fwfeat {
+	const char * const fwid;
+	u32 feat_flags;
+};
+
+static const struct brcmf_feat_fwfeat brcmf_feat_fwfeat_map[] = {
+	/* brcmfmac43602-pcie.ap.bin from linux-firmware.git commit ea1178515b88 */
+	{ "01-6cb8e269", BIT(BRCMF_FEAT_MONITOR) },
+	/* brcmfmac4366b-pcie.bin from linux-firmware.git commit 52442afee990 */
+	{ "01-c47a91a4", BIT(BRCMF_FEAT_MONITOR) },
+};
+
+static void brcmf_feat_firmware_overrides(struct brcmf_pub *drv)
+{
+	const struct brcmf_feat_fwfeat *e;
+	u32 feat_flags = 0;
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(brcmf_feat_fwfeat_map); i++) {
+		e = &brcmf_feat_fwfeat_map[i];
+		if (!strcmp(e->fwid, drv->fwver)) {
+			feat_flags = e->feat_flags;
+			break;
+		}
+	}
+
+	feat_flags |= BIT(BRCMF_FEAT_MONITOR_FLAG);
+
+	if (!feat_flags)
+		return;
+
+	for (i = 0; i < BRCMF_FEAT_LAST; i++)
+		if (feat_flags & BIT(i))
+			brcmf_dbg(INFO, "enabling firmware feature: %s\n",
+				  brcmf_feat_names[i]);
+	drv->feat_flags |= feat_flags;
+}
+
 /**
  * brcmf_feat_iovar_int_get() - determine feature through iovar query.
  *
@@ -105,6 +147,22 @@ static void brcmf_feat_iovar_int_get(struct brcmf_if *ifp,
 
 	err = brcmf_fil_iovar_int_get(ifp, name, &data);
 	if (err == 0) {
+		brcmf_dbg(INFO, "enabling feature: %s\n", brcmf_feat_names[id]);
+		ifp->drvr->feat_flags |= BIT(id);
+	} else {
+		brcmf_dbg(TRACE, "%s feature check failed: %d\n",
+			  brcmf_feat_names[id], err);
+	}
+}
+
+static void brcmf_feat_iovar_data_set(struct brcmf_if *ifp,
+				      enum brcmf_feat_id id, char *name,
+				      const void *data, size_t len)
+{
+	int err;
+
+	err = brcmf_fil_iovar_data_set(ifp, name, data, len);
+	if (err != -BRCMF_FW_UNSUPPORTED) {
 		brcmf_dbg(INFO, "enabling feature: %s\n", brcmf_feat_names[id]);
 		ifp->drvr->feat_flags |= BIT(id);
 	} else {
@@ -136,11 +194,14 @@ void brcmf_feat_attach(struct brcmf_pub *drvr)
 {
 	struct brcmf_if *ifp = brcmf_get_ifp(drvr, 0);
 	struct brcmf_pno_macaddr_le pfn_mac;
+	struct brcmf_gscan_config gscan_cfg;
 	u32 wowl_cap;
 	s32 err;
 
 	brcmf_feat_firmware_capabilities(ifp);
-
+	memset(&gscan_cfg, 0, sizeof(gscan_cfg));
+	brcmf_feat_iovar_data_set(ifp, BRCMF_FEAT_GSCAN, "pfn_gscan_cfg",
+				  &gscan_cfg, sizeof(gscan_cfg));
 	brcmf_feat_iovar_int_get(ifp, BRCMF_FEAT_PNO, "pfn");
 	if (drvr->bus_if->wowl_supported)
 		brcmf_feat_iovar_int_get(ifp, BRCMF_FEAT_WOWL, "wowl");
@@ -175,6 +236,9 @@ void brcmf_feat_attach(struct brcmf_pub *drvr)
 			  drvr->settings->feature_disable);
 		ifp->drvr->feat_flags &= ~drvr->settings->feature_disable;
 	}
+	brcmf_feat_iovar_int_get(ifp, BRCMF_FEAT_FWSUP, "sup_wpa");
+
+	brcmf_feat_firmware_overrides(drvr);
 
 	/* set chip related quirks */
 	switch (drvr->bus_if->chip) {
