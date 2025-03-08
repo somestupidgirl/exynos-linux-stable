@@ -7829,11 +7829,7 @@ dhd_allocate_if(dhd_pub_t *dhdpub, int ifidx, const char *name,
 		ifp->net->name[IFNAMSIZ - 1] = '\0';
 	}
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 9))
 #define IFP_NET_DESTRUCTOR	ifp->net->priv_destructor
-#else
-#define IFP_NET_DESTRUCTOR	ifp->net->destructor
-#endif // endif
 
 #ifdef WL_CFG80211
 	if (ifidx == 0) {
