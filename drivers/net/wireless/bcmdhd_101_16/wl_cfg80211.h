@@ -1146,6 +1146,7 @@ struct net_info {
 	struct wireless_dev *wdev;
 	struct wl_profile profile;
 	wl_iftype_t iftype;
+	s32 mode;
 	s32 roam_off;
 	unsigned long sme_state;
 	bool pm_restore;
@@ -2415,6 +2416,27 @@ wl_get_mode_by_netdev(struct bcm_cfg80211 *cfg, struct net_device *ndev)
 	WL_CFG_NET_LIST_SYNC_UNLOCK(&cfg->net_list_sync, flags);
 	return mode;
 }
+
+#ifdef CONFIG_WL_MONITOR
+static inline void
+wl_set_mode_by_netdev(struct bcm_cfg80211 *cfg, struct net_device *ndev,
+	s32 mode)
+{
+	struct net_info *_net_info, *next;
+	unsigned long int flags;
+
+	WL_CFG_NET_LIST_SYNC_LOCK(&cfg->net_list, flags);
+	GCC_DIAGNOSTIC_PUSH_SUPPRESS_CAST();
+	BCM_LIST_FOR_EACH_ENTRY_SAFE(_net_info, next, &cfg->net_list, list) {
+		GCC_DIAGNOSTIC_POP();
+		if (ndev && (_net_info->ndev == ndev)) {
+			_net_info->mode = mode;
+			break;
+		}
+	}
+	WL_CFG_NET_LIST_SYNC_UNLOCK(&cfg->net_list, flags);
+}
+#endif
 
 static inline s32
 wl_get_bssidx_by_wdev(struct bcm_cfg80211 *cfg, struct wireless_dev *wdev)
