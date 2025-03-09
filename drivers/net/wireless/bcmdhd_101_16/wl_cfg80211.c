@@ -15438,8 +15438,8 @@ static s32 wl_config_infra(struct bcm_cfg80211 *cfg, struct net_device *ndev, u1
 {
 	s32 infra = 0;
 	s32 err = 0;
-	s32 mode = 0;
 #ifdef CONFIG_WL_MONITOR
+	s32 mode = 0;
 	s32 mon = 0;
 	s32 promisc = 0;
 #endif
@@ -15453,9 +15453,11 @@ static s32 wl_config_infra(struct bcm_cfg80211 *cfg, struct net_device *ndev, u1
 		case WL_IF_TYPE_AP:
 		case WL_IF_TYPE_STA:
 		case WL_IF_TYPE_P2P_GO:
+#ifdef CONFIG_WL_MONITOR
 			mode = WL_MODE_AP;
 			infra = 1;
 			break;
+#endif
 		case WL_IF_TYPE_P2P_GC:
 			/* Intentional fall through */
 			infra = 1;
@@ -15511,7 +15513,9 @@ static s32 wl_config_infra(struct bcm_cfg80211 *cfg, struct net_device *ndev, u1
 		}
 #endif
 	}
+#ifdef CONFIG_WL_MONITOR
 	wl_set_mode_by_netdev(cfg, ndev, mode);
+#endif
 
 	return 0;
 }

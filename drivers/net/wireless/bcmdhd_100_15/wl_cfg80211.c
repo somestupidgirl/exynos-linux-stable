@@ -3338,6 +3338,10 @@ wl_cfg80211_change_p2prole(struct wiphy *wiphy, struct net_device *ndev, enum nl
 	return BCME_OK;
 }
 
+#ifdef CONFIG_WL_MONITOR
+extern s32 wldev_ioctl(struct net_device *dev, u32 cmd, void *arg, u32 len, u32 set);
+#endif
+
 static s32
 wl_cfg80211_change_virtual_iface(struct wiphy *wiphy, struct net_device *ndev,
 	enum nl80211_iftype type,
@@ -3349,6 +3353,7 @@ wl_cfg80211_change_virtual_iface(struct wiphy *wiphy, struct net_device *ndev,
 	s32 infra = 1;
 	s32 err = BCME_OK;
 #ifdef CONFIG_WL_MONITOR
+	s32 mode = 0;
 	s32 mon = 0;
 	s32 promisc = 0;
 #endif
@@ -3461,12 +3466,10 @@ wl_cfg80211_change_virtual_iface(struct wiphy *wiphy, struct net_device *ndev,
 		ndev->type = ARPHRD_ETHER;
 	}
 
-	if (!ap) {
-		wldev_ioctl(ndev, WLC_SET_INFRA, &infra, sizeof(s32), true);
-		wldev_ioctl(ndev, WLC_SET_PROMISC, &promisc, sizeof(s32), true);
-		wldev_ioctl(ndev, WLC_SET_MONITOR, &mon, sizeof(s32), true);
-		wl_set_mode_by_netdev(cfg, ndev, mode);
-	}
+	wldev_ioctl(ndev, WLC_SET_INFRA, &infra, sizeof(s32), true);
+	wldev_ioctl(ndev, WLC_SET_PROMISC, &promisc, sizeof(s32), true);
+	wldev_ioctl(ndev, WLC_SET_MONITOR, &mon, sizeof(s32), true);
+	wl_set_mode_by_netdev(cfg, ndev, mode);
 #else
 	err = wldev_ioctl_set(ndev, WLC_SET_INFRA, &infra, sizeof(s32));
 	if (err < 0) {
@@ -9929,6 +9932,11 @@ change_bw:
 }
 
 #ifdef CONFIG_WL_MONITOR
+extern s32 wl_cfg80211_set_channel(struct wiphy *wiphy,
+								struct net_device *dev,
+						struct ieee80211_channel *chan,
+				enum nl80211_channel_type channel_type);
+
 static s32
 wl_cfg80211_set_monitor_channel(struct wiphy *wiphy, struct cfg80211_chan_def *chandef)
 {
@@ -18526,10 +18534,15 @@ static void wl_put_event(struct bcm_cfg80211 *cfg, struct wl_event_q *e)
 	MFREE(cfg->osh, e, e->datalen + sizeof(struct wl_event_q));
 }
 
+#ifdef CONFIG_WL_MONITOR
+extern s32 wldev_ioctl(struct net_device *dev, u32 cmd, void *arg, u32 len, u32 set);
+#endif
+
 static s32 wl_config_infra(struct bcm_cfg80211 *cfg, struct net_device *ndev, u16 iftype)
 {
 	s32 infra = 0;
 	s32 err = 0;
+	s32 mode = 0;
 	bool skip_infra = false;
 
 	switch (iftype) {
@@ -18540,11 +18553,20 @@ static s32 wl_config_infra(struct bcm_cfg80211 *cfg, struct net_device *ndev, u1
 		case WL_IF_TYPE_AP:
 		case WL_IF_TYPE_STA:
 		case WL_IF_TYPE_P2P_GO:
+			mode = WL_MODE_AP;
+			infra = 1;
+			break;
 		case WL_IF_TYPE_P2P_GC:
 			/* Intentional fall through */
 			infra = 1;
 			break;
 		case WL_IF_TYPE_MONITOR:
+#ifdef CONFIG_WL_MONITOR
+			mode = WL_MODE_MONITOR;
+			mon = 2;
+			promisc = 1;
+			break;
+#endif
 		case WL_IF_TYPE_NAN:
 			/* Intentionall fall through */
 		default:
@@ -18583,6 +18605,8 @@ static s32 wl_config_infra(struct bcm_cfg80211 *cfg, struct net_device *ndev, u1
 		ndev->type = ARPHRD_ETHER;
 	}
 #endif
+
+	wl_set_mode_by_netdev(cfg, ndev, mode);
 
 	return 0;
 }
