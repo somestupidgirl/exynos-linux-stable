@@ -167,12 +167,17 @@ disable_kernelsu() {
 #}
 enable_nethunter() {
 	printf "Config: Enabling Kali Nethunter support\n"
+
 	echo "CONFIG_NETHUNTER_SUPPORT=y" >> "$CUR_DIR"/arch/arm64/configs/exynos9810_temp_defconfig
 	echo "CONFIG_NETHUNTER_ETHERNET_SUPPORT=y" >> "$CUR_DIR"/arch/arm64/configs/exynos9810_temp_defconfig
 	echo "CONFIG_NETHUNTER_SDR_SUPPORT=y" >> "$CUR_DIR"/arch/arm64/configs/exynos9810_temp_defconfig
 	echo "CONFIG_NETHUNTER_HID_SUPPORT=y" >> "$CUR_DIR"/arch/arm64/configs/exynos9810_temp_defconfig
 	echo "CONFIG_NETHUNTER_USB_SUPPORT=y" >> "$CUR_DIR"/arch/arm64/configs/exynos9810_temp_defconfig
 	echo "CONFIG_NETHUNTER_WIFI_DRIVERS_SUPPORT=y" >> "$CUR_DIR"/arch/arm64/configs/exynos9810_temp_defconfig
+
+	cat $CUR_DIR/arch/arm64/configs/nethunter_defconfig >> $CUR_DIR/arch/arm64/configs/exynos9810_temp_defconfig
+	cat $CUR_DIR/arch/arm64/configs/custom_defconfig >> $CUR_DIR/arch/arm64/configs/exynos9810_temp_defconfig
+
 	KERNEL_NAME="$KERNEL_NAME"
 }
 
