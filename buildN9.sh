@@ -66,6 +66,7 @@ patch_wireguard
 
 make exynos9810_temp_defconfig -j$(nproc --all)
 make -j$(nproc --all)
+#make -j$(nproc --all) gconfig
 
 printf $KERNEL_NAME
 
@@ -77,9 +78,8 @@ if [ ! -d $BUILD_DIR/$DTB_NAME/$DEVICE_NAME ]; then
   mkdir -p $BUILD_DIR/$DTB_NAME/$DEVICE_NAME
 fi
 
-if [ -f $CUR_DIR/**/*.ko ]; then
-  mkdir $ANDROID_DIR/modules
-  cp $CUR_DIR/**/*.ko $MOD_DIR
+if [ "$NETHUNTER" == true ]; then
+  find ./ -name '*.ko' -exec cp -prv '{}' $BUILD_DIR/modules/system/lib/modules/ ';'
 fi
 
 if [ ! -f $CUR_DIR/arch/arm64/boot/Image ] || [ ! -f $CUR_DIR/arch/arm64/boot/dtb.img ]; then
