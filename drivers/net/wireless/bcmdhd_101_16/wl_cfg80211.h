@@ -916,7 +916,9 @@ enum wl_mode {
 	WL_MODE_BSS = 0,
 	WL_MODE_IBSS = 1,
 	WL_MODE_AP = 2,
-
+#ifdef CONFIG_WL_MONITOR
+	WL_MODE_MONITOR = 3,
+#endif
 	WL_MODE_NAN = 4,
 	WL_MODE_MAX
 };

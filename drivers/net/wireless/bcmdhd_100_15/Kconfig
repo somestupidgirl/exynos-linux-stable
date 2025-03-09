@@ -200,6 +200,12 @@ config WL_NAN
 	---help---
 	  This is a configuration for NAN Feature.
 
+config WL_MONITOR
+	bool "Monitor Mode Support"
+	depends on BROADCOM_WIFI
+	---help---
+	  This is a configuration for Monitor Mode support.
+
 config BCMDHD_PCIE
 	bool "Enable PCIe I/F Support"
 	depends on (BCM4354 || BCM4358 || BCM4359 || BCM4361 || BCM4375) && PCI

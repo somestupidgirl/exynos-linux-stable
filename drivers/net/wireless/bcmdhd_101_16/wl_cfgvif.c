@@ -1001,6 +1001,10 @@ wl_cfg80211_change_virtual_iface(struct wiphy *wiphy, struct net_device *ndev,
 {
 	s32 infra = 1;
 	s32 err = BCME_OK;
+#ifdef CONFIG_WL_MONITOR
+	s32 mon = 0;
+	s32 promisc = 0;
+#endif
 	u16 wl_iftype;
 	u16 wl_mode;
 	struct bcm_cfg80211 *cfg = wiphy_priv(wiphy);
@@ -1100,6 +1104,12 @@ wl_cfg80211_change_virtual_iface(struct wiphy *wiphy, struct net_device *ndev,
 		err = wl_cfg80211_change_p2prole(wiphy, ndev, type);
 		break;
 	case NL80211_IFTYPE_MONITOR:
+#ifdef CONFIG_WL_MONITOR
+		mon = 2;
+		promisc = 1;
+		mode = WL_MODE_MONITOR;
+		break;
+#endif
 	case NL80211_IFTYPE_WDS:
 	case NL80211_IFTYPE_MESH_POINT:
 		/* Intentional fall through */
@@ -1109,11 +1119,26 @@ wl_cfg80211_change_virtual_iface(struct wiphy *wiphy, struct net_device *ndev,
 		goto fail;
 	}
 
+#ifdef CONFIG_WL_MONITOR
+	if (mon) {
+		ndev->type = ARPHRD_IEEE80211_RADIOTAP;
+	} else {
+		ndev->type = ARPHRD_ETHER;
+	}
+
+	if (!ap) {
+		wldev_ioctl(ndev, WLC_SET_INFRA, &infra, sizeof(s32), true);
+		wldev_ioctl(ndev, WLC_SET_PROMISC, &promisc, sizeof(s32), true);
+		wldev_ioctl(ndev, WLC_SET_MONITOR, &mon, sizeof(s32), true);
+		wl_set_mode_by_netdev(cfg, ndev, mode);
+	}
+#else
 	err = wldev_ioctl_set(ndev, WLC_SET_INFRA, &infra, sizeof(s32));
 	if (err < 0) {
 		WL_ERR(("SET INFRA/IBSS  error %d\n", err));
 		goto fail;
 	}
+#endif
 
 	wl_cfg80211_iface_state_ops(primary_ndev->ieee80211_ptr,
 		WL_IF_CHANGE_DONE, wl_iftype, wl_mode);
