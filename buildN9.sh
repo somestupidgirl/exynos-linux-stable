@@ -79,7 +79,7 @@ if [ ! -d $BUILD_DIR/$DTB_NAME/$DEVICE_NAME ]; then
 fi
 
 if [ "$NETHUNTER" == true ]; then
-  find ./ -name '*.ko' -exec cp -prv '{}' $BUILD_DIR/modules/system/lib/modules/ ';'
+  find ./ -name '*.ko' -exec cp -prv '{}' $ZIP_DIR/modules/system/lib/modules/ ';'
 fi
 
 if [ ! -f $CUR_DIR/arch/arm64/boot/Image ] || [ ! -f $CUR_DIR/arch/arm64/boot/dtb.img ]; then
