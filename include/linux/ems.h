@@ -106,7 +106,7 @@ extern bool get_energy_table_status(void);
 #else
 static inline struct sched_group *lb_fit_idlest_group(struct sched_domain *sd,
                struct task_struct *p) { return NULL; }
-static inline void init_ems(void);
+static inline void init_ems(void) { };
 static inline void exynos_init_entity_util_avg(struct sched_entity *se) { }
 
 static inline int
