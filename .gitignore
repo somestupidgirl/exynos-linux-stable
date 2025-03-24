@@ -145,3 +145,24 @@ kernel/configs/android-*.cfg
 
 # KSU
 drivers/kernelsu
+
+# Output files
+android/boot/split/extra
+android/boot/split/kernel
+android/boot/split/ramdisk.cpio
+android/zip/Kernel.tar
+android/zip/Kernel.tar.zst
+android/zip/Dtb
+android/zip/Dtb-erofs
+android/zip/Kernel
+android/zip/Kernel-ksu
+android/zip/Kernel-stock
+android/zip/Kernel-stock-ksu
+android/zip/Kernel-aosp
+android/zip/Kernel-aosp-ksu
+android/zip/empty-boot.img
+android/build
+android/out
+
+# Clang
+toolchain/clang

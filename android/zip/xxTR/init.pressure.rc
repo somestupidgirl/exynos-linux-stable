@@ -1,0 +1,3 @@
+# Custom Pressure Settings
+on property:sys.boot_completed=1
+    write /sys/class/sec/tsp/cmd set_pressure_user_level,3
