@@ -82,7 +82,7 @@ tc_setup() {
 	
 	if [ ! -f $CUR_DIR/toolchain/clang/bin/clang ]; then
 		printf "Fetching clang...\n"
-		curl https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/tags/android-15.0.0_r12/clang-r536225.tar.gz --output $CUR_DIR/toolchain/clang/clang.tar.gz
+		curl https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r547379.tar.gz --output $CUR_DIR/toolchain/clang/clang.tar.gz
 	 	cd $CUR_DIR/toolchain/clang && tar xzvf clang.tar.gz && rm clang.tar.gz && cd $CUR_DIR
 	fi
 
